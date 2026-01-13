@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Machine;
+use App\Models\ProductRouting;
+use Illuminate\Support\Facades\DB;
+
+// Import Excel Stuff
+use App\Exports\ProductTemplateExport;
+use App\Imports\ProductsImport;
+use Maatwebsite\Excel\Facades\Excel;
+
+class MasterDataController extends Controller
+{
+    // 1. LIST DATA (INDEX)
+    public function index()
+    {
+        $products = Product::withCount('routings') 
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        return view('master_data.index', compact('products'));
+    }
+
+    // 2. FORM TAMBAH BARU
+    public function create()
+    {
+        $machines = Machine::orderBy('name')->get();
+        return view('master_data.form', compact('machines'));
+    }
+
+    // 3. FORM EDIT
+    public function edit($id)
+    {
+        $product = Product::with('routings')->findOrFail($id);
+        $machines = Machine::orderBy('name')->get();
+
+        return view('master_data.form', compact('product', 'machines'));
+    }
+
+    // 4. SIMPAN DATA (STORE/UPDATE)
+    public function store(Request $request, $id = null)
+    {
+        // 1. Validasi
+        $request->validate([
+            'code_part'   => 'required|string|max:50', // <--- BARU: Validasi Code Part
+            'part_number' => 'required|string|unique:products,part_number,' . $id,
+            'part_name'   => 'required|string',
+            'customer'    => 'required|string',        // <--- BARU: Validasi Customer
+            
+            // Validasi Array Routing
+            'routings'    => 'nullable|array',
+            'routings.*.machine_id' => 'required|exists:machines,id',
+            'routings.*.process_name' => 'required|string',
+            'routings.*.pcs_per_hour' => 'required|numeric|min:1', 
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // 2. HITUNG REFERENSI GLOBAL (Bottleneck)
+            $bottleneckCT = 0;
+            $minPcsPerHour = 999999; 
+
+            if ($request->has('routings')) {
+                foreach ($request->routings as $r) {
+                    $val = (int) $r['pcs_per_hour'];
+                    if ($val > 0 && $val < $minPcsPerHour) {
+                        $minPcsPerHour = $val;
+                    }
+                }
+            }
+
+            // Konversi Pcs/Jam ke C/T (Detik)
+            if ($minPcsPerHour < 999999 && $minPcsPerHour > 0) {
+                $bottleneckCT = 3600 / $minPcsPerHour;
+            }
+
+            // 3. Simpan Product (Header)
+            // Tambahkan 'code_part' dan 'customer' agar ikut tersimpan
+            $data = $request->only([
+                'code_part', 
+                'part_number', 
+                'part_name', 
+                'customer', 
+                'uom', 
+                'qty_per_box', 
+                'safety_stock', 
+                'flow_process'
+            ]);
+            
+            $data['cycle_time'] = $bottleneckCT; 
+
+            if ($id) {
+                $product = Product::findOrFail($id);
+                $product->update($data);
+            } else {
+                $product = Product::create($data);
+            }
+
+            // 4. SIMPAN ROUTING DETIL
+            if ($id) {
+                ProductRouting::where('product_id', $product->id)->delete();
+            }
+
+            if ($request->has('routings')) {
+                foreach ($request->routings as $route) {
+                    ProductRouting::create([
+                        'product_id'   => $product->id,
+                        'machine_id'   => $route['machine_id'],
+                        'process_name' => $route['process_name'],
+                        'pcs_per_hour' => $route['pcs_per_hour'] 
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return redirect()->route('master.index')->with('success', 'Data Part Lengkap (Code & Customer) berhasil disimpan!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors('Gagal menyimpan: ' . $e->getMessage());
+        }
+    }
+
+    // Method Delete (Hapus Part)
+    public function destroy($id)
+    {
+        Product::findOrFail($id)->delete();
+        return back()->with('success', 'Part berhasil dihapus.');
+    }
+
+    // Method EXPORT & IMPORT
+    public function downloadTemplate()
+    { 
+        return Excel::download(new ProductTemplateExport, 'master_part.xlsx');
+    }
+    public function import(Request $request)
+    { 
+        $request->validate(['file' => 'required|mimes:xlsx,xls']);
+        try {
+            Excel::import(new ProductsImport, $request->file('file'));
+            return back()->with('success', 'Import Sukses');
+        } catch (\Exception $e) {
+            return back()->withErrors('Gagal Import: ' . $e->getMessage());
+        }
+    }
+}

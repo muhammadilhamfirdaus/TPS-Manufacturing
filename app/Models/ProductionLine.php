@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class ProductionLine extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['name', 'std_manpower'];
+
+    // Relasi: Satu Line punya banyak Mesin
+    public function machines()
+    {
+        return $this->hasMany(Machine::class);
+    }
+}

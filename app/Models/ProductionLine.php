@@ -9,7 +9,7 @@ class ProductionLine extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'std_manpower'];
+    protected $fillable = ['plant','name', 'std_manpower'];
 
     // Relasi: Satu Line punya banyak Mesin
     public function machines()

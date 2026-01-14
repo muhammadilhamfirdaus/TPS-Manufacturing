@@ -166,6 +166,12 @@
             </li>
 
             <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('mpp.index') ? 'active' : '' }}" href="{{ route('mpp.index') }}">
+                    <i class="fas fa-users-cog"></i> MPP Summary
+                </a>
+            </li>
+
+            <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('kanban.index') ? 'active' : '' }}"
                    href="{{ route('kanban.index') }}">
                     <i class="fas fa-columns"></i> Kanban Board
@@ -183,12 +189,16 @@
             </li>
 
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('master.index','master.create','master.edit') ? 'active' : '' }}"
-                   href="{{ route('master.index') }}">
-                    <i class="fas fa-box-open"></i> Part Master
+                <a class="nav-link {{ request()->routeIs('master.*') ? 'active' : '' }}" href="{{ route('master.index') }}">
+                    <i class="fas fa-cubes me-2"></i> Master Part (Item)
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('bom.*') ? 'active' : '' }}" href="{{ route('bom.list') }}">
+                    <i class="fas fa-sitemap me-2"></i> Bill of Materials
+                </a>
+            </li>
             {{-- SYSTEM --}}
             <div class="sidebar-heading">SYSTEM</div>
 

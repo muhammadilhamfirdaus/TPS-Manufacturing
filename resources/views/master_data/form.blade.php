@@ -12,7 +12,7 @@
                     <h4 class="fw-bold text-dark mb-1">
                         {{ isset($product) ? 'Edit Part Data' : 'Tambah Part Baru' }}
                     </h4>
-                    <p class="text-muted small mb-0">Manajemen data part dan flow proses produksi</p>
+                    <p class="text-muted small mb-0">Manajemen data part, kategori, dan flow proses produksi</p>
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{{ route('master.index') }}" class="btn btn-light border text-secondary">
@@ -55,6 +55,33 @@
                                 <input type="text" name="part_name" class="form-control" 
                                        placeholder="Nama Deskripsi Part"
                                        value="{{ old('part_name', $product->part_name ?? '') }}" required>
+                            </div>
+
+                            {{-- BARIS BARU: Kategori Part (PENTING UNTUK BOM) --}}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Kategori / Tipe Material</label>
+                                <div class="row g-2">
+                                    @php
+                                        $cats = [
+                                            'FINISH GOOD' => ['color'=>'primary', 'desc'=>'Barang Jadi (Siap Jual)'],
+                                            'SEMI FINISH GOOD' => ['color'=>'info', 'desc'=>'Barang Setengah Jadi'],
+                                            'RAW MATERIAL' => ['color'=>'secondary', 'desc'=>'Bahan Baku Mentah'],
+                                            'CONSUMABLE' => ['color'=>'warning', 'desc'=>'Bahan Pembantu (Aux)']
+                                        ];
+                                        // Default: Finish Good
+                                        $curCat = old('category', $product->category ?? 'FINISH GOOD');
+                                    @endphp
+
+                                    @foreach($cats as $key => $val)
+                                    <div class="col-6">
+                                        <input type="radio" class="btn-check" name="category" id="cat_{{$key}}" value="{{$key}}" {{ $curCat == $key ? 'checked' : '' }}>
+                                        <label class="btn btn-outline-{{$val['color']}} w-100 text-start p-2 border-2" for="cat_{{$key}}">
+                                            <span class="d-block fw-bold small">{{ $key }}</span>
+                                            <span class="d-block text-muted" style="font-size: 0.65rem;">{{ $val['desc'] }}</span>
+                                        </label>
+                                    </div>
+                                    @endforeach
+                                </div>
                             </div>
 
                             {{-- BARIS 3: Customer --}}

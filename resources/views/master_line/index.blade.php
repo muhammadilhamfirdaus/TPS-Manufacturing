@@ -22,17 +22,25 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold" width="30%">Nama Line</th>
+                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold" width="15%">Plant</th> {{-- Kolom Baru --}}
+                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="25%">Nama Line</th>
                                 <th class="py-3 text-secondary small text-uppercase fw-bold text-center" width="15%">Jumlah Mesin</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="40%">Preview Mesin</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="30%">Preview Mesin</th>
                                 <th class="pe-4 py-3 text-secondary small text-uppercase fw-bold text-end" width="15%">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($lines as $line)
                             <tr>
-                                {{-- Nama Line --}}
+                                {{-- Plant (BARU) --}}
                                 <td class="ps-4">
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-bold px-3">
+                                        {{ $line->plant ?? 'PLANT -' }}
+                                    </span>
+                                </td>
+
+                                {{-- Nama Line --}}
+                                <td>
                                     <div class="d-flex align-items-center">
                                         <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
                                             <i class="fas fa-industry"></i>
@@ -87,7 +95,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center py-5">
+                                <td colspan="5" class="text-center py-5">
                                     <div class="text-muted opacity-50">
                                         <i class="fas fa-network-wired fa-3x mb-3"></i>
                                         <p class="mb-0">Belum ada data Line Produksi.</p>

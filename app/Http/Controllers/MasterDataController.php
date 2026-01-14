@@ -45,10 +45,11 @@ class MasterDataController extends Controller
     {
         // 1. Validasi
         $request->validate([
-            'code_part'   => 'required|string|max:50', // <--- BARU: Validasi Code Part
+            'code_part'   => 'required|string|max:50', 
             'part_number' => 'required|string|unique:products,part_number,' . $id,
             'part_name'   => 'required|string',
-            'customer'    => 'required|string',        // <--- BARU: Validasi Customer
+            'category'    => 'required|string', // <--- WAJIB: Validasi Kategori Baru
+            'customer'    => 'required|string',        
             
             // Validasi Array Routing
             'routings'    => 'nullable|array',
@@ -59,7 +60,7 @@ class MasterDataController extends Controller
 
         DB::beginTransaction();
         try {
-            // 2. HITUNG REFERENSI GLOBAL (Bottleneck)
+            // 2. HITUNG REFERENSI GLOBAL (Bottleneck Cycle Time)
             $bottleneckCT = 0;
             $minPcsPerHour = 999999; 
 
@@ -78,18 +79,10 @@ class MasterDataController extends Controller
             }
 
             // 3. Simpan Product (Header)
-            // Tambahkan 'code_part' dan 'customer' agar ikut tersimpan
-            $data = $request->only([
-                'code_part', 
-                'part_number', 
-                'part_name', 
-                'customer', 
-                'uom', 
-                'qty_per_box', 
-                'safety_stock', 
-                'flow_process'
-            ]);
+            // Ambil semua input kecuali token dan routings array
+            $data = $request->except(['_token', 'routings']); 
             
+            // Override cycle time dengan hasil kalkulasi bottleneck
             $data['cycle_time'] = $bottleneckCT; 
 
             if ($id) {
@@ -101,6 +94,7 @@ class MasterDataController extends Controller
 
             // 4. SIMPAN ROUTING DETIL
             if ($id) {
+                // Hapus routing lama agar bersih (replace logic)
                 ProductRouting::where('product_id', $product->id)->delete();
             }
 
@@ -116,7 +110,7 @@ class MasterDataController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('master.index')->with('success', 'Data Part Lengkap (Code & Customer) berhasil disimpan!');
+            return redirect()->route('master.index')->with('success', 'Data Part (Kategori & Routing) berhasil disimpan!');
 
         } catch (\Exception $e) {
             DB::rollBack();

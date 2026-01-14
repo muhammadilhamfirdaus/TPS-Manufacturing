@@ -50,4 +50,21 @@ class Product extends Model
     {
         return $this->hasOne(KanbanMaster::class);
     }
+
+    // Tambahkan di dalam class Product
+    public function bomComponents()
+    {
+        // Relasi ke Child (Komponen yang dibutuhkan produk ini)
+        return $this->belongsToMany(Product::class, 'bom_details', 'parent_product_id', 'child_product_id')
+            ->withPivot('id', 'quantity') // Agar bisa akses kolom quantity & ID pivot
+            ->withTimestamps();
+    }
+
+    public function usedIn()
+    {
+        // Relasi ke Parent (Produk ini dipakai di mana saja? - Where Used)
+        return $this->belongsToMany(Product::class, 'bom_details', 'child_product_id', 'parent_product_id')
+            ->withPivot('id', 'quantity')
+            ->withTimestamps();
+    }
 }

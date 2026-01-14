@@ -8,37 +8,59 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Loading Report</h4>
-                <p class="text-muted small mb-0 text-uppercase fw-bold text-primary">
-                    <i class="far fa-calendar-alt me-1"></i> Periode: {{ date('F Y') }}
+                <p class="text-muted small mb-0 fw-bold text-primary">
+                    <i class="far fa-calendar-alt me-1"></i> 
+                    PERIODE: {{ strtoupper($period) }}
                 </p>
             </div>
 
-            <div class="d-flex gap-2 align-items-center">
-                {{-- Filter Line --}}
-                <form action="{{ route('plans.loading_report') }}" method="GET" class="d-flex align-items-center">
-                    <select name="line_id" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-secondary" style="min-width: 200px;" onchange="this.form.submit()">
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                {{-- Form Filter (Line, Bulan, Tahun) --}}
+                <form action="{{ route('plans.loading_report') }}" method="GET" class="d-flex gap-2 align-items-center">
+                    
+                    {{-- Filter Line --}}
+                    <select name="line_id" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-dark" style="min-width: 180px;" onchange="this.form.submit()">
                         @foreach($allLines as $l)
                             <option value="{{ $l->id }}" {{ $line->id == $l->id ? 'selected' : '' }}>
                                 {{ $l->name }}
                             </option>
                         @endforeach
                     </select>
+
+                    {{-- Filter Bulan --}}
+                    <select name="month" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-secondary" style="width: 120px;" onchange="this.form.submit()">
+                        @for($m=1; $m<=12; $m++)
+                            <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
+                                {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                            </option>
+                        @endfor
+                    </select>
+
+                    {{-- Filter Tahun --}}
+                    <select name="year" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-secondary" style="width: 90px;" onchange="this.form.submit()">
+                        @for($y=date('Y')-1; $y<=date('Y')+1; $y++)
+                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
+                                {{ $y }}
+                            </option>
+                        @endfor
+                    </select>
+
                 </form>
 
-                <div class="vr h-50 my-auto text-secondary opacity-25"></div>
+                <div class="vr h-50 my-auto text-secondary opacity-25 d-none d-md-block"></div>
 
                 {{-- Tombol Download --}}
                 <div class="btn-group shadow-sm" role="group">
-                    <a href="{{ route('plans.loading_excel', ['line_id' => $line->id]) }}" class="btn btn-sm btn-white border text-success fw-bold" target="_blank" title="Download Excel">
+                    <a href="{{ route('plans.loading_excel', ['line_id' => $line->id, 'month' => $month, 'year' => $year]) }}" class="btn btn-sm btn-white border text-success fw-bold" target="_blank" title="Download Excel">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </a>
-                    <a href="{{ route('plans.loading_pdf', ['line_id' => $line->id]) }}" class="btn btn-sm btn-white border text-danger fw-bold" target="_blank" title="Download PDF">
+                    <a href="{{ route('plans.loading_pdf', ['line_id' => $line->id, 'month' => $month, 'year' => $year]) }}" class="btn btn-sm btn-white border text-danger fw-bold" target="_blank" title="Download PDF">
                         <i class="fas fa-file-pdf me-1"></i> PDF
                     </a>
                 </div>
 
                 {{-- Tombol Kembali --}}
-                <a href="{{ route('plans.index') }}" class="btn btn-sm btn-light border text-secondary" title="Kembali">
+                <a href="{{ route('plans.index') }}" class="btn btn-sm btn-light border text-secondary shadow-sm" title="Kembali">
                     <i class="fas fa-arrow-left"></i>
                 </a>
             </div>
@@ -48,22 +70,22 @@
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-header bg-white py-3 border-bottom text-center">
                 <h6 class="fw-bold text-dark mb-0 text-uppercase ls-1">
-                    {{ $line->name }} - Machine Loading Analysis
+                    {{ $line->name }} - MACHINE LOADING ANALYSIS
                 </h6>
             </div>
             
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
                     {{-- Tabel Matriks --}}
                     <table class="table table-bordered table-sm align-middle text-center mb-0" style="font-size: 0.7rem; border-color: #e5e7eb;">
-                        <thead class="bg-light text-secondary">
+                        <thead class="bg-light text-secondary sticky-top" style="z-index: 10;">
                             <tr>
-                                <th rowspan="2" class="align-middle py-3 bg-light" width="30">#</th>
-                                <th rowspan="2" class="align-middle py-3 bg-light">CODE PART</th>
-                                <th rowspan="2" class="align-middle py-3 bg-light">PART NO</th>
-                                <th rowspan="2" class="align-middle py-3 bg-light">PART NAME</th>
-                                <th rowspan="2" class="align-middle py-3 bg-light">PROCESS</th>
-                                <th rowspan="2" class="align-middle py-3 bg-light">PLAN</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary" width="30">#</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary">CODE PART</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary">PART NO</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary">PART NAME</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary">PROCESS</th>
+                                <th rowspan="2" class="align-middle py-3 bg-light text-secondary">PLAN</th>
                                 <th rowspan="2" class="align-middle py-3 bg-light text-primary">PCS/H</th>
                                 <th rowspan="2" class="align-middle py-3 bg-light text-muted">C/T</th>
                                 
@@ -74,14 +96,14 @@
                                     </th>
                                 @endforeach
                                 
-                                <th rowspan="2" class="align-middle py-3 bg-warning bg-opacity-10 text-dark border-start">TOTAL LOAD</th>
+                                <th rowspan="2" class="align-middle py-3 bg-warning bg-opacity-10 text-dark border-start" style="min-width: 80px;">TOTAL LOAD</th>
                             </tr>
                             <tr>
                                 {{-- Header Nama Mesin --}}
                                 @foreach($groupedMachines as $groupName => $machines)
                                     @foreach($machines as $machine)
-                                        <th class="p-1 bg-white" style="min-width: 70px;">
-                                            <div class="fw-bold text-dark text-truncate" title="{{ $machine->name }}">{{ $machine->name }}</div>
+                                        <th class="p-1 bg-white border-bottom" style="min-width: 80px;">
+                                            <div class="fw-bold text-dark text-truncate small" title="{{ $machine->name }}">{{ $machine->name }}</div>
                                             <div class="text-muted" style="font-size: 0.6rem;">{{ $machine->machine_code ?? '-' }}</div>
                                         </th>
                                     @endforeach
@@ -108,7 +130,7 @@
                                 @foreach($groupedMachines as $groupName => $machines)
                                     @foreach($machines as $machine)
                                         @if($machine->id == $row->machine_id)
-                                            <td class="bg-success bg-opacity-25 fw-bold text-dark border border-success border-opacity-25 position-relative">
+                                            <td class="bg-success bg-opacity-25 fw-bold text-dark border border-success border-opacity-25">
                                                 {{ number_format($row->load_hours, 1) }}
                                             </td>
                                         @else
@@ -117,7 +139,7 @@
                                     @endforeach
                                 @endforeach
 
-                                {{-- Total Load --}}
+                                {{-- Total Load per Row --}}
                                 <td class="fw-bold bg-warning bg-opacity-10 border-start">{{ number_format($row->load_hours, 1) }}</td>
                             </tr>
                             @empty
@@ -130,6 +152,43 @@
                             </tr>
                             @endforelse
                         </tbody>
+                        
+                        {{-- FOOTER TOTAL YANG MENYATU & SOLID --}}
+                        <tfoot class="sticky-bottom" style="z-index: 10;">
+                            {{-- Gunakan border-top tebal & warna background abu-abu muda agar terlihat sebagai pondasi tabel --}}
+                            <tr class="fw-bold text-dark" style="background-color: #e9ecef; border-top: 2px solid #6c757d;">
+                                
+                                {{-- LABEL TOTAL (Rata Kanan) --}}
+                                <td colspan="8" class="text-end py-3 pe-3 align-middle text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                                    TOTAL MACHINE LOAD (HOURS)
+                                </td>
+                                
+                                {{-- LOOP TOTAL PER MESIN --}}
+                                @foreach($groupedMachines as $groupName => $machines)
+                                    @foreach($machines as $machine)
+                                        @php
+                                            $total = $machineTotals[$machine->id] ?? 0;
+                                            // Logic Visual:
+                                            // - Jika ada nilai (>0): Warna teks hitam tebal
+                                            // - Jika 0: Warna abu-abu pudar (-)
+                                            $textColor = $total > 0 ? 'text-dark' : 'text-muted opacity-25';
+                                        @endphp
+                                        
+                                        {{-- Border Start & End dijaga agar garis vertikal tabel tetap nyambung --}}
+                                        <td class="text-center py-3 align-middle border-start border-secondary border-opacity-25 {{ $textColor }}" 
+                                            style="background-color: #e9ecef;">
+                                            {{ $total > 0 ? number_format($total, 1) : '-' }}
+                                        </td>
+                                    @endforeach
+                                @endforeach
+
+                                {{-- GRAND TOTAL (Highlight Kuning Solid) --}}
+                                <td class="text-center py-3 align-middle bg-warning text-dark border-start border-dark" 
+                                    style="box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);">
+                                    {{ number_format($grandTotalLoad, 1) }}
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

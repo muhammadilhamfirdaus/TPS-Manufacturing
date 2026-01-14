@@ -4,11 +4,34 @@
 <div class="row justify-content-center">
     <div class="col-12">
         
+        {{-- Alert Messages --}}
+        @if(session('success'))
+            <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success d-flex align-items-center shadow-sm mb-4">
+                <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-flex align-items-center shadow-sm mb-4">
+                <i class="fas fa-exclamation-triangle me-2"></i> 
+                <div>
+                    <strong>Terjadi Kesalahan:</strong>
+                    <ul class="mb-0 ps-3">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
         {{-- Header & Actions --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Master Part Data</h4>
-                <p class="text-muted small mb-0">Kelola database part number dan proses produksi</p>
+                <p class="text-muted small mb-0">Kelola database part number, BOM, dan proses produksi</p>
             </div>
             <div class="d-flex gap-2">
                 {{-- Tombol Excel Dropdown --}}
@@ -31,7 +54,7 @@
                 </div>
 
                 {{-- Tombol Tambah --}}
-                <a href="{{ route('master.create') }}" class="btn btn-primary px-3">
+                <a href="{{ route('master.create') }}" class="btn btn-primary px-3 shadow-sm">
                     <i class="fas fa-plus me-1"></i> Tambah Part
                 </a>
             </div>
@@ -90,12 +113,19 @@
                                 {{-- Aksi --}}
                                 <td class="text-end pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('master.edit', $product->id) }}" class="btn btn-sm btn-light text-primary border-0" title="Edit">
+                                        
+                                        {{-- TOMBOL BOM (BARU) --}}
+                                        <a href="{{ route('bom.index', $product->id) }}" class="btn btn-sm btn-info text-white border-0 shadow-sm" title="Setting BOM / Komponen">
+                                            <i class="fas fa-sitemap"></i>
+                                        </a>
+
+                                        <a href="{{ route('master.edit', $product->id) }}" class="btn btn-sm btn-light text-primary border-0 shadow-sm" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        
                                         <form action="{{ route('master.destroy', $product->id) }}" method="POST" onsubmit="return confirm('Yakin hapus part ini?')">
                                             @csrf @method('DELETE')
-                                            <button class="btn btn-sm btn-light text-danger border-0" title="Hapus">
+                                            <button class="btn btn-sm btn-light text-danger border-0 shadow-sm" title="Hapus">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
                                         </form>

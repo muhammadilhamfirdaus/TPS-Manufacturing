@@ -12,7 +12,12 @@ class MasterLineController extends Controller
     // 1. LIST LINE (INDEX)
     public function index()
     {
-        $lines = ProductionLine::withCount('machines')->orderBy('name')->paginate(10);
+        // Urutkan berdasarkan Plant lalu Nama Line
+        $lines = ProductionLine::withCount('machines')
+                    ->orderBy('plant')
+                    ->orderBy('name')
+                    ->paginate(10);
+                    
         return view('master_line.index', compact('lines'));
     }
 
@@ -30,12 +35,14 @@ class MasterLineController extends Controller
     }
 
     // 4. SIMPAN (STORE/UPDATE)
-    // 4. SIMPAN (STORE/UPDATE)
     public function store(Request $request, $id = null)
     {
-        // Validasi input
+        // Validasi input (tambah validasi plant)
         $request->validate([
-            'name' => 'required|string|max:100',
+            'plant' => 'required|string', // <--- Wajib diisi
+            'name'  => 'required|string|max:100',
+            
+            // Validasi Array Mesin
             'machines' => 'nullable|array',
             'machines.*.name' => 'required|string',
             'machines.*.machine_code' => 'required|string',
@@ -44,13 +51,18 @@ class MasterLineController extends Controller
         DB::beginTransaction();
         try {
             // A. Simpan Production Line
-            $dataLine = $request->only(['name']); 
-            $dataLine['std_manpower'] = 0; // Default 0
+            // Ambil data Plant & Name dari request
+            $dataLine = $request->only(['plant', 'name']); 
+            
+            // Set default std_manpower jadi 0 (dihitung di MPP)
+            $dataLine['std_manpower'] = 0; 
 
             if ($id) {
                 $line = ProductionLine::findOrFail($id);
-                $line->update(['name' => $dataLine['name']]); 
+                // Update Plant & Name
+                $line->update($dataLine); 
             } else {
+                // Create Baru
                 $line = ProductionLine::create($dataLine);
             }
 
@@ -68,9 +80,7 @@ class MasterLineController extends Controller
                                 'machine_code' => $m['machine_code'],
                                 'machine_group' => $m['machine_group'] ?? null,
                                 'production_line_id' => $line->id,
-                                
-                                // [PERBAIKAN DI SINI] Set default capacity 0
-                                'capacity_per_hour' => 0 
+                                'capacity_per_hour' => 0 // Default 0
                             ]);
                             $existingIds[] = $machine->id;
                         }
@@ -80,16 +90,14 @@ class MasterLineController extends Controller
                             'name' => $m['name'],
                             'machine_code' => $m['machine_code'],
                             'machine_group' => $m['machine_group'] ?? null,
-                            
-                            // [PERBAIKAN DI SINI] Set default capacity 0
-                            'capacity_per_hour' => 0
+                            'capacity_per_hour' => 0 // Default 0
                         ]);
                         $existingIds[] = $newMachine->id;
                     }
                 }
             }
 
-            // Hapus mesin yang dibuang user
+            // Hapus mesin yang dibuang user dari form
             Machine::where('production_line_id', $line->id)
                     ->whereNotIn('id', $existingIds)
                     ->delete();

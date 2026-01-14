@@ -49,6 +49,22 @@
                             <h6 class="fw-bold text-primary mb-0"><i class="fas fa-info-circle me-2"></i>Informasi Line</h6>
                         </div>
                         <div class="card-body">
+                            {{-- Dropdown Plant (BARU) --}}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Lokasi Plant</label>
+                                <select name="plant" class="form-select fw-bold text-dark bg-light border-0" required>
+                                    <option value="">-- Pilih Plant --</option>
+                                    @php 
+                                        $plants = ['PLANT 1', 'PLANT 2', 'PLANT 3A', 'PLANT 3B']; 
+                                    @endphp
+                                    @foreach($plants as $p)
+                                        <option value="{{ $p }}" {{ old('plant', $line->plant ?? '') == $p ? 'selected' : '' }}>
+                                            {{ $p }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label small text-muted text-uppercase fw-bold">Nama Line</label>
                                 <input type="text" name="name" class="form-control fw-bold text-dark bg-light border-0" 
@@ -60,7 +76,7 @@
                             <div class="alert alert-light border-0 bg-light small text-secondary d-flex align-items-start mt-4 rounded-3">
                                 <i class="fas fa-lightbulb text-warning me-2 mt-1"></i>
                                 <div>
-                                    <strong>Tips:</strong> Nama Line ini akan menjadi grup utama saat membuat Production Plan. Pastikan namanya unik.
+                                    <strong>Tips:</strong> Data Plant digunakan untuk pengelompokan di report MPP Summary.
                                 </div>
                             </div>
                         </div>

@@ -10,11 +10,17 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
-        'code_part',   // <--- BARU
+        'code_part',
         'part_number',
         'part_name',
-        'customer',    // <--- BARU
+        'category',      // <--- WAJIB DITAMBAHKAN AGAR BISA DISIMPAN
+        'customer',
         'cycle_time',
         'uom',
         'qty_per_box',
@@ -51,18 +57,17 @@ class Product extends Model
         return $this->hasOne(KanbanMaster::class);
     }
 
-    // Tambahkan di dalam class Product
+    // Relasi ke Child (Komponen yang dibutuhkan produk ini - BOM)
     public function bomComponents()
     {
-        // Relasi ke Child (Komponen yang dibutuhkan produk ini)
         return $this->belongsToMany(Product::class, 'bom_details', 'parent_product_id', 'child_product_id')
             ->withPivot('id', 'quantity') // Agar bisa akses kolom quantity & ID pivot
             ->withTimestamps();
     }
 
+    // Relasi ke Parent (Produk ini dipakai di mana saja? - Where Used)
     public function usedIn()
     {
-        // Relasi ke Parent (Produk ini dipakai di mana saja? - Where Used)
         return $this->belongsToMany(Product::class, 'bom_details', 'child_product_id', 'parent_product_id')
             ->withPivot('id', 'quantity')
             ->withTimestamps();

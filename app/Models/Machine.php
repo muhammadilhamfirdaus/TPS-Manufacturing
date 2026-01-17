@@ -14,6 +14,7 @@ class Machine extends Model
         'name',
         'machine_code',
         'machine_group',
+        'type',
         'capacity_per_hour', // <--- TAMBAHKAN INI
     ];
 

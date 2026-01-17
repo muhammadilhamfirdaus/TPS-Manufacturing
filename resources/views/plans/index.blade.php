@@ -4,52 +4,74 @@
 <div class="row justify-content-center">
     <div class="col-12">
         
-        {{-- Header & Toolbar --}}
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        {{-- Header & Statistik Ringkas --}}
+        <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Production Planning</h4>
-                <p class="text-muted small mb-0">Monitoring Loading Mesin, Manpower & Kebutuhan Kanban</p>
+                <p class="text-muted small mb-0">Monitoring jadwal, beban mesin (Loading), dan kebutuhan resources.</p>
             </div>
+            <div class="d-flex gap-2">
+                {{-- Dropdown Template --}}
+                <div class="btn-group shadow-sm">
+                    <button type="button" class="btn btn-light border text-success fw-bold dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-file-excel me-1"></i> Download Template
+                    </button>
+                    <ul class="dropdown-menu border-0 shadow">
+                        <li>
+                            <a class="dropdown-item small py-2" href="{{ route('plans.export', ['type' => 'empty']) }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                        <i class="fas fa-plus text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Add Data (Blank)</div>
+                                        <div class="text-muted fst-italic small">Template kosong.</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item small py-2" href="{{ route('plans.export', ['type' => 'set_data']) }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                        <i class="fas fa-list-ul text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Set Data (Pre-filled)</div>
+                                        <div class="text-muted fst-italic small">Isi data master.</div>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                {{-- Button Upload --}}
+                <button type="button" class="btn btn-light border text-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-upload me-1"></i> Upload Plan
+                </button>
 
-            <div class="d-flex gap-2 align-items-center">
-                {{-- Form Import (Hidden Input Trick) --}}
-                <form action="{{ route('plans.import') }}" method="POST" enctype="multipart/form-data" class="d-flex">
-                    @csrf
-                    <div class="input-group">
-                        <input type="file" name="file" class="form-control form-control-sm border-end-0" required accept=".xlsx, .xls" style="max-width: 200px;">
-                        <button type="submit" class="btn btn-sm btn-white border border-start-0 text-success" title="Upload Excel">
-                            <i class="fas fa-file-import"></i>
-                        </button>
-                    </div>
-                </form>
-
-                <div class="vr h-50 my-auto text-secondary opacity-25"></div>
-
-                {{-- Tombol Template --}}
-                <a href="{{ route('plans.export') }}" class="btn btn-white border shadow-sm btn-sm text-secondary" title="Download Template">
-                    <i class="fas fa-download me-1"></i> Template
-                </a>
-
-                {{-- Tombol Manual Input --}}
-                <a href="{{ route('plans.create') }}" class="btn btn-primary btn-sm px-3 shadow-sm">
-                    <i class="fas fa-plus me-1"></i> Input Plan
+                {{-- Button Input --}}
+                <a href="{{ route('plans.create') }}" class="btn btn-primary fw-bold shadow-sm px-4">
+                    <i class="fas fa-plus me-1"></i> Input Plan Baru
                 </a>
             </div>
         </div>
 
-        {{-- Alert Messages --}}
+        
+
+        {{-- Flash Message --}}
         @if(session('success'))
-            <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success d-flex align-items-center shadow-sm mb-4">
+            <div class="alert alert-success border-0 bg-success bg-opacity-10 text-success mb-4 rounded-3 shadow-sm">
                 <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
+        {{-- Error Message --}}
         @if($errors->any())
-            <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-flex align-items-center shadow-sm mb-4">
-                <i class="fas fa-exclamation-triangle me-2"></i> 
-                <div><strong>Gagal Import:</strong> {{ $errors->first() }}</div>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger mb-4 rounded-3 shadow-sm">
+                <i class="fas fa-exclamation-triangle me-2"></i> {{ $errors->first() }}
             </div>
         @endif
 
@@ -60,122 +82,146 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold">Tanggal</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold">Line & Produk</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center">Target (Qty)</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold" style="width: 25%;">Machine Loading</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold">Manpower</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center">Kanban</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center">Status</th>
+                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold">Jadwal & Line</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold">Identitas Produk</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center">Target</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="25%">Analisa Beban (Loading)</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold">Resources</th>
                                 <th class="pe-4 py-3 text-secondary small text-uppercase fw-bold text-end">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($plans as $plan)
-                                @foreach($plan->details as $detail)
-                                <tr>
-                                    {{-- Tanggal --}}
+                                {{-- Ambil Detail Pertama --}}
+                                @php 
+                                    $detail = $plan->details->first(); 
+                                    $product = $detail->product ?? null;
+                                    $ct = $product->cycle_time ?? 0;
+                                    $loadingHours = $ct > 0 ? ($detail->qty_plan * $ct) / 3600 : 0;
+                                    $isOverload = $loadingHours > 8; 
+                                @endphp
+
+                                <tr class="border-bottom">
                                     <td class="ps-4">
                                         <div class="d-flex flex-column">
-                                            <span class="fw-bold text-dark">{{ \Carbon\Carbon::parse($plan->plan_date)->format('d M Y') }}</span>
-                                            <small class="text-muted">{{ \Carbon\Carbon::parse($plan->plan_date)->format('l') }}</small>
+                                            <span class="fw-bold text-dark mb-1">
+                                                <i class="far fa-calendar-alt me-1 text-primary"></i> 
+                                                {{ date('d M Y', strtotime($plan->plan_date)) }}
+                                            </span>
+                                            <div class="d-flex gap-1">
+                                                <span class="badge bg-light text-secondary border">
+                                                    {{ date('l', strtotime($plan->plan_date)) }}
+                                                </span>
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+                                                    SHIFT {{ $plan->shift_id }}
+                                                </span>
+                                            </div>
+                                            <small class="text-muted mt-2 fw-bold text-uppercase" style="font-size: 0.7rem;">
+                                                <i class="fas fa-industry me-1"></i> {{ $plan->productionLine->name ?? '-' }}
+                                            </small>
                                         </div>
                                     </td>
-                                    
-                                    {{-- Line & Produk --}}
                                     <td>
-                                        <div class="mb-1">
-                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
-                                                {{ $plan->productionLine->name }}
+                                        @if($product)
+                                            <div class="mb-1">
+                                                <span class="badge bg-dark text-white rounded-1" style="font-size: 0.65rem;">
+                                                    {{ $product->code_part ?? 'N/A' }}
+                                                </span>
+                                                <span class="fw-bold text-primary ms-1">{{ $product->part_number }}</span>
+                                            </div>
+                                            <div class="fw-bold text-dark" style="font-size: 0.9rem;">
+                                                {{ Str::limit($product->part_name, 30) }}
+                                            </div>
+                                            <div class="text-muted small mt-1 d-flex align-items-center gap-2">
+                                                <span title="Cycle Time"><i class="fas fa-stopwatch me-1"></i> C/T: <strong>{{ $product->cycle_time }}s</strong></span>
+                                                <span class="vr"></span>
+                                                <span title="Kapasitas per Jam"><i class="fas fa-cogs me-1"></i> Cap: <strong>{{ $product->cycle_time > 0 ? round(3600/$product->cycle_time) : 0 }} pcs/h</strong></span>
+                                            </div>
+                                        @else
+                                            <span class="text-danger small fst-italic">Produk terhapus</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="fw-bold text-dark display-6" style="font-size: 1.2rem;">
+                                            {{ number_format($detail->qty_plan) }}
+                                        </div>
+                                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Pcs</small>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex justify-content-between mb-1 small fw-bold">
+                                            <span class="{{ $isOverload ? 'text-danger' : 'text-success' }}">
+                                                {{ number_format($detail->calculated_loading_pct, 1) }}% Load
+                                            </span>
+                                            <span class="text-muted">
+                                                {{ number_format($loadingHours, 1) }} Jam / 8.0 Jam
                                             </span>
                                         </div>
-                                        @if($detail->product)
-                                            <div class="fw-bold text-dark small">{{ $detail->product->part_name }}</div>
-                                            <div class="text-muted small" style="font-size: 0.75rem;">{{ $detail->product->part_number }}</div>
-                                        @else
-                                            <div class="text-danger small fst-italic"><i class="fas fa-exclamation-circle"></i> Part Terhapus</div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar {{ $isOverload ? 'bg-danger' : ($detail->calculated_loading_pct > 90 ? 'bg-warning' : 'bg-success') }}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ min($detail->calculated_loading_pct, 100) }}%">
+                                            </div>
+                                        </div>
+                                        @if($isOverload)
+                                            <div class="mt-1 text-danger fw-bold small">
+                                                <i class="fas fa-exclamation-triangle me-1"></i> OVERLOAD (+{{ number_format($loadingHours - 8, 1) }} Jam)
+                                            </div>
                                         @endif
                                     </td>
-
-                                    {{-- Target Qty --}}
-                                    <td class="text-center">
-                                        <span class="fw-bold fs-6 text-dark">{{ number_format($detail->qty_plan) }}</span>
-                                        <div class="text-muted small" style="font-size: 0.7rem;">PCS</div>
-                                    </td>
-                                    
-                                    {{-- Machine Loading Bar --}}
                                     <td>
-                                        @php $load = $detail->calculated_loading_pct; @endphp
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <small class="fw-bold {{ $load > 100 ? 'text-danger' : 'text-success' }}">
-                                                {{ $load }}%
-                                            </small>
-                                            @if($load > 100)
-                                                <small class="badge bg-danger text-white py-0 px-1" style="font-size: 0.6rem;">OVER</small>
+                                        <div class="d-flex flex-column gap-1">
+                                            <div class="d-flex align-items-center small">
+                                                <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                                                    <i class="fas fa-users" style="font-size: 0.7rem;"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="fw-bold">{{ $detail->calculated_manpower }}</span> Org
+                                                    <span class="text-muted" style="font-size: 0.65rem;">(Std)</span>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center small">
+                                                <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px;">
+                                                    <i class="fas fa-tags" style="font-size: 0.7rem;"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="fw-bold">{{ $detail->calculated_kanban_cards }}</span> Kartu
+                                                    <span class="text-muted" style="font-size: 0.65rem;">(Req)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-light border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-cog"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                                <li>
+                                                    <form action="{{ route('plans.destroy', $plan->id) }}" method="POST" onsubmit="return confirm('Hapus plan ini?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit" class="dropdown-item small text-danger fw-bold">
+                                                            <i class="fas fa-trash-alt me-2"></i> Hapus
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        <div class="mt-2">
+                                            @if($plan->status == 'AUTO-MRP')
+                                                <span class="badge bg-purple-100 text-purple-700 border border-purple-200" style="background: #f3e8ff; color: #7e22ce;">AUTO MRP</span>
+                                            @else
+                                                <span class="badge bg-light text-secondary border">MANUAL</span>
                                             @endif
                                         </div>
-                                        <div class="progress rounded-pill bg-light" style="height: 6px;">
-                                            <div class="progress-bar rounded-pill {{ $load > 100 ? 'bg-danger' : 'bg-success' }}" 
-                                                 role="progressbar" 
-                                                 style="width: {{ min($load, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {{-- Man Power --}}
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="fw-bold text-dark fs-6 me-1">{{ $detail->calculated_manpower }}</div>
-                                            <small class="text-muted">Org</small>
-                                        </div>
-                                        
-                                        {{-- Indikator Kurang Orang --}}
-                                        @if($detail->calculated_manpower > $plan->productionLine->std_manpower)
-                                            <div class="d-flex align-items-center text-danger small mt-1" style="font-size: 0.7rem;">
-                                                <i class="fas fa-user-plus me-1"></i>
-                                                <span>Need +{{ $detail->calculated_manpower - $plan->productionLine->std_manpower }}</span>
-                                            </div>
-                                        @else
-                                            <div class="text-success small mt-1" style="font-size: 0.7rem;">
-                                                <i class="fas fa-check-circle me-1"></i> OK
-                                            </div>
-                                        @endif
-                                    </td>
-
-                                    {{-- Kanban Cards --}}
-                                    <td class="text-center">
-                                        <div class="bg-light rounded-3 py-1 px-2 border d-inline-block">
-                                            <div class="fw-bold text-primary">{{ $detail->calculated_kanban_cards ?? 0 }}</div>
-                                            <div class="text-muted" style="font-size: 0.65rem;">Cards</div>
-                                        </div>
-                                    </td>
-
-                                    {{-- Status --}}
-                                    <td class="text-center">
-                                        @if($plan->status == 'DRAFT')
-                                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3">DRAFT</span>
-                                        @else
-                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3">FIXED</span>
-                                        @endif
-                                    </td>
-
-                                    {{-- Aksi --}}
-                                    <td class="text-end pe-4">
-                                        <form action="{{ route('plans.destroy', $plan->id) }}" method="POST" onsubmit="return confirm('Hapus plan tanggal {{ $plan->plan_date }}?')">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-light text-danger border-0 rounded-circle p-2" title="Hapus" style="width: 32px; height: 32px;">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
                                     </td>
                                 </tr>
-                                @endforeach
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5">
+                                    <td colspan="6" class="text-center py-5">
                                         <div class="text-muted opacity-50">
-                                            <i class="fas fa-clipboard-list fa-3x mb-3"></i>
-                                            <p class="mb-0">Belum ada jadwal produksi.</p>
+                                            <i class="far fa-calendar-times fa-3x mb-3"></i>
+                                            <p class="mb-1 fw-bold">Belum ada Planning Produksi</p>
+                                            <small>Silakan input manual atau upload excel.</small>
                                         </div>
                                     </td>
                                 </tr>
@@ -183,13 +229,37 @@
                         </tbody>
                     </table>
                 </div>
-                
-                {{-- Pagination --}}
                 <div class="d-flex justify-content-end p-3 border-top">
                     {{ $plans->links() }}
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+{{-- Modal Import Excel --}}
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ route('plans.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Import Plan dari Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Pilih File Excel</label>
+                        <input type="file" name="file" class="form-control" required>
+                        <small class="text-muted">Gunakan template yang sudah disediakan.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary">Upload & Generate</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 @endsection

@@ -4,7 +4,7 @@
 <div class="row justify-content-center">
     <div class="col-12">
         
-        {{-- Tampilkan Error Validasi (Jika Ada) --}}
+        {{-- Tampilkan Error Validasi --}}
         @if ($errors->any())
             <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger mb-4 rounded-3">
                 <div class="d-flex align-items-center">
@@ -49,13 +49,15 @@
                             <h6 class="fw-bold text-primary mb-0"><i class="fas fa-info-circle me-2"></i>Informasi Line</h6>
                         </div>
                         <div class="card-body">
-                            {{-- Dropdown Plant (BARU) --}}
+                            {{-- Dropdown Plant --}}
+                           {{-- Dropdown Plant --}}
                             <div class="mb-3">
                                 <label class="form-label small text-muted text-uppercase fw-bold">Lokasi Plant</label>
                                 <select name="plant" class="form-select fw-bold text-dark bg-light border-0" required>
                                     <option value="">-- Pilih Plant --</option>
                                     @php 
-                                        $plants = ['PLANT 1', 'PLANT 2', 'PLANT 3A', 'PLANT 3B']; 
+                                        // TAMBAHKAN 'EXTERNAL' DI SINI
+                                        $plants = ['PLANT 1', 'PLANT 2', 'PLANT 3A', 'PLANT 3B', 'EXTERNAL']; 
                                     @endphp
                                     @foreach($plants as $p)
                                         <option value="{{ $p }}" {{ old('plant', $line->plant ?? '') == $p ? 'selected' : '' }}>
@@ -98,8 +100,10 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="bg-light">
                                         <tr>
-                                            <th class="ps-4 py-3 text-secondary small text-uppercase" width="40%">Nama Mesin</th>
-                                            <th class="py-3 text-secondary small text-uppercase" width="30%">Kode Aset</th>
+                                            <th class="ps-4 py-3 text-secondary small text-uppercase" width="30%">Nama Mesin</th>
+                                            {{-- KOLOM BARU: TIPE --}}
+                                            <th class="py-3 text-secondary small text-uppercase" width="20%">Tipe</th>
+                                            <th class="py-3 text-secondary small text-uppercase" width="20%">Kode Aset</th>
                                             <th class="py-3 text-secondary small text-uppercase" width="20%">Group</th>
                                             <th class="text-center py-3 text-secondary small text-uppercase" width="10%">Aksi</th>
                                         </tr>
@@ -109,11 +113,20 @@
                                         @if(isset($line) && $line->machines->count() > 0)
                                             @foreach($line->machines as $index => $machine)
                                                 <tr>
+                                                    {{-- Hidden ID untuk Update --}}
                                                     <input type="hidden" name="machines[{{ $index }}][id]" value="{{ $machine->id }}">
+                                                    
                                                     <td class="ps-4">
                                                         <input type="text" name="machines[{{ $index }}][name]" 
                                                                class="form-control form-control-sm border-0 bg-light fw-bold" required 
                                                                placeholder="Ex: P2-1" value="{{ $machine->name }}">
+                                                    </td>
+                                                    {{-- SELECT TIPE (EDIT MODE) --}}
+                                                    <td>
+                                                        <select name="machines[{{ $index }}][type]" class="form-select form-select-sm border-0 bg-light text-secondary fw-bold">
+                                                            <option value="INTERNAL" {{ ($machine->type ?? 'INTERNAL') == 'INTERNAL' ? 'selected' : '' }}>INTERNAL</option>
+                                                            <option value="SUBCONT" {{ ($machine->type ?? '') == 'SUBCONT' ? 'selected' : '' }}>SUBCONT (Vendor)</option>
+                                                        </select>
                                                     </td>
                                                     <td>
                                                         <input type="text" name="machines[{{ $index }}][machine_code]" 
@@ -164,11 +177,17 @@
         let tableBody = document.getElementById('machine-table-body');
         let row = document.createElement('tr');
         
-        // Menggunakan style border-0 bg-light agar konsisten dengan PHP loop
+        // SELECT TIPE JUGA DITAMBAHKAN DI SINI
         row.innerHTML = `
             <td class="ps-4">
                 <input type="text" name="machines[${machineIndex}][name]" 
                        class="form-control form-control-sm border-0 bg-light fw-bold" required placeholder="Nama Mesin (Ex: P2-5)">
+            </td>
+            <td>
+                <select name="machines[${machineIndex}][type]" class="form-select form-select-sm border-0 bg-light text-secondary fw-bold">
+                    <option value="INTERNAL">INTERNAL</option>
+                    <option value="SUBCONT">SUBCONT (Vendor)</option>
+                </select>
             </td>
             <td>
                 <input type="text" name="machines[${machineIndex}][machine_code]" 

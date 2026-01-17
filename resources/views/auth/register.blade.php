@@ -2,231 +2,282 @@
 
 @section('content')
 <style>
-    /* Reset & Layout */
-    body, html {
-        height: 100%;
-        margin: 0;
-        overflow-x: hidden;
-        font-family: 'Poppins', sans-serif;
-    }
+/* =====================
+   GLOBAL
+===================== */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: #f8fafc;
+}
 
-    .row-full-height {
-        min-height: 100vh;
-    }
+.row-full-height {
+    min-height: 100vh;
+}
 
-    /* --- KOLOM KIRI: GAMBAR INDUSTRI (Sama dengan Login) --- */
-    .left-side {
-        background: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop') no-repeat center center;
-        background-size: cover;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: 3rem;
-    }
+/* =====================
+   LEFT SIDE (BRANDING)
+===================== */
+.left-side {
+    position: relative;
+    background: url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=2070&auto=format&fit=crop')
+        center / cover no-repeat;
+    padding: 4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
 
-    .left-side::before {
-        content: "";
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
-        z-index: 1;
-    }
+.left-side::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(2,6,23,0.65),
+        rgba(15,23,42,0.55)
+    );
+    z-index: 1;
+}
 
-    .brand-content {
-        position: relative;
-        z-index: 2;
-        color: white;
-    }
+.left-side::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle at top left,
+        rgba(255,255,255,0.08),
+        transparent 60%
+    );
+    z-index: 1;
+}
 
-    .brand-title {
-        font-weight: 700;
-        font-size: 2.5rem;
-        letter-spacing: -1px;
-        margin-bottom: 0.5rem;
-    }
+.brand-content {
+    position: relative;
+    z-index: 2;
+    color: #fff;
+}
 
-    .brand-desc {
-        font-size: 1.1rem;
-        color: #cbd5e1;
-        font-weight: 300;
-        max-width: 80%;
-    }
+.badge-system {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    box-shadow: 0 10px 30px rgba(59,130,246,.35);
+}
 
-    /* --- KOLOM KANAN: FORM REGISTER --- */
-    .right-side {
-        background-color: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-    }
+.brand-title {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 1.5rem;
+}
 
-    .register-box {
-        width: 100%;
-        max-width: 500px; /* Lebih lebar sedikit dari login */
-    }
+.brand-desc {
+    color: #e2e8f0;
+    max-width: 85%;
+    font-size: 1.05rem;
+}
 
-    .form-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: #64748b;
-        letter-spacing: 0.5px;
-    }
+.brand-footer {
+    position: relative;
+    z-index: 2;
+    font-size: .7rem;
+    color: #cbd5f5;
+}
 
-    .form-control {
-        padding: 12px 15px;
-        border: 2px solid #e2e8f0;
-        background-color: #f8fafc;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        transition: all 0.2s;
-    }
+/* =====================
+   RIGHT SIDE (REGISTER)
+===================== */
+.right-side {
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+}
 
-    .form-control:focus {
-        border-color: #3b82f6;
-        background-color: #fff;
-        box-shadow: none;
-    }
+.register-box {
+    width: 100%;
+    max-width: 460px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 3rem;
+    box-shadow:
+        0 20px 40px rgba(0,0,0,.08),
+        0 1px 0 rgba(0,0,0,.05);
+    animation: fadeUp .6s ease;
+}
 
-    .input-group-text {
-        background: #f8fafc;
-        border: 2px solid #e2e8f0;
-        border-right: none;
-        color: #94a3b8;
-    }
-    
-    .input-group .form-control { border-left: none; }
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-    .btn-primary {
-        background-color: #0f172a;
-        border: none;
-        padding: 14px;
-        font-weight: 600;
-        border-radius: 8px;
-        letter-spacing: 0.5px;
-        transition: transform 0.2s;
-    }
+.register-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    box-shadow: 0 15px 35px rgba(15,23,42,.4);
+}
 
-    .btn-primary:hover {
-        background-color: #1e293b;
-        transform: translateY(-2px);
-    }
+/* =====================
+   FORM
+===================== */
+.form-label {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: .5px;
+}
 
-    @media (max-width: 991.98px) {
-        .left-side { display: none; }
-    }
+.form-control {
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    padding: 13px 15px;
+    background: #f8fafc;
+    font-size: .95rem;
+}
+
+.form-control:focus {
+    background: #fff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+}
+
+.input-group-text {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-right: none;
+    color: #94a3b8;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+/* =====================
+   BUTTON
+===================== */
+.btn-primary {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border: none;
+    padding: 14px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    border-radius: 12px;
+    transition: all .3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(15,23,42,.4);
+}
+
+/* =====================
+   RESPONSIVE
+===================== */
+@media (max-width: 991px) {
+    .left-side { display: none; }
+}
 </style>
 
 <div class="container-fluid p-0">
-    <div class="row g-0 row-full-height">
-        
-        {{-- BAGIAN KIRI: BRANDING --}}
-        <div class="col-lg-6 left-side">
-            <div class="brand-content">
-                <div class="mb-4">
-                    <span class="badge bg-blue-500 text-white px-3 py-2 rounded-pill fw-bold" style="background: #3b82f6;">TPS SYSTEM v2.0</span>
-                </div>
-                <h1 class="brand-title">Join Our Team</h1>
-                <p class="brand-desc">
-                    Daftarkan akun baru untuk mengakses sistem perencanaan produksi dan monitoring pabrik secara real-time.
-                </p>
-            </div>
-            <div class="brand-content">
-                <small class="text-muted" style="font-size: 0.7rem;">
-                    &copy; {{ date('Y') }} PT. Toyota Production System. All Rights Reserved.
-                </small>
-            </div>
-        </div>
+<div class="row g-0 row-full-height">
 
-        {{-- BAGIAN KANAN: FORM REGISTER --}}
-        <div class="col-lg-6 right-side">
-            <div class="register-box">
-                
-                <div class="text-center mb-5">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 60px; height: 60px;">
-                        <i class="fas fa-user-plus fa-lg"></i>
-                    </div>
-                    <h3 class="fw-bold text-dark">Buat Akun Baru</h3>
-                    <p class="text-muted small">Lengkapi data diri Anda untuk melanjutkan.</p>
-                </div>
+{{-- LEFT --}}
+<div class="col-lg-6 left-side">
+    <div class="brand-content">
+        <span class="badge-system">TPS SYSTEM v2.0</span>
 
-                <form method="POST" action="{{ route('register') }}">
-                    @csrf
+        <h1 class="brand-title">
+            Join Our Team
+        </h1>
 
-                    {{-- Nama Lengkap --}}
-                    <div class="mb-4">
-                        <label for="name" class="form-label">Nama Lengkap</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="far fa-user"></i></span>
-                            <input id="name" type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   name="name" value="{{ old('name') }}" required autocomplete="name" autofocus
-                                   placeholder="John Doe">
-                        </div>
-                        @error('name')
-                            <span class="text-danger small mt-1">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Email --}}
-                    <div class="mb-4">
-                        <label for="email" class="form-label">Email Perusahaan</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="far fa-envelope"></i></span>
-                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" 
-                                   name="email" value="{{ old('email') }}" required autocomplete="email"
-                                   placeholder="user@tps-manufacturing.com">
-                        </div>
-                        @error('email')
-                            <span class="text-danger small mt-1">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Password Group --}}
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <label for="password" class="form-label">Password</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" 
-                                       name="password" required autocomplete="new-password" placeholder="••••••••">
-                            </div>
-                            @error('password')
-                                <span class="text-danger small mt-1">{{ $message }}</span>
-                            @enderror
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <label for="password-confirm" class="form-label">Konfirmasi Password</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
-                                <input id="password-confirm" type="password" class="form-control" 
-                                       name="password_confirmation" required autocomplete="new-password" placeholder="••••••••">
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Button Register --}}
-                    <div class="d-grid mb-4">
-                        <button type="submit" class="btn btn-primary shadow-lg">
-                            DAFTAR SEKARANG <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
-                    </div>
-
-                    {{-- Link ke Login --}}
-                    <div class="text-center">
-                        <p class="text-muted small mb-0">Sudah punya akun?</p>
-                        <a href="{{ route('login') }}" class="fw-bold text-decoration-none" style="color: #3b82f6;">
-                            Masuk di sini
-                        </a>
-                    </div>
-
-                </form>
-
-            </div>
-        </div>
-
+        <p class="brand-desc">
+            Daftarkan akun Anda untuk mengakses sistem perencanaan produksi,
+            monitoring mesin, dan kontrol pabrik secara real-time.
+        </p>
     </div>
+
+    <div class="brand-footer text-end">
+        © {{ date('Y') }} PT. Toyota Production System
+    </div>
+</div>
+
+{{-- RIGHT --}}
+<div class="col-lg-6 right-side">
+<div class="register-box">
+
+    <div class="text-center mb-5">
+        <div class="register-icon mb-3">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <h3 class="fw-bold">Buat Akun Baru</h3>
+        <p class="text-muted small">Lengkapi data di bawah ini</p>
+    </div>
+
+    <form method="POST" action="{{ route('register') }}">
+        @csrf
+
+        <div class="mb-4">
+            <label class="form-label">Nama Lengkap</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="far fa-user"></i></span>
+                <input type="text" name="name" class="form-control" required placeholder="John Doe">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Email Perusahaan</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="far fa-envelope"></i></span>
+                <input type="email" name="email" class="form-control" required placeholder="user@company.com">
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Konfirmasi Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
+                    <input type="password" name="password_confirmation" class="form-control" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid mb-4">
+            <button class="btn btn-primary">
+                DAFTAR SEKARANG <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+        </div>
+
+        <div class="text-center small">
+            <span class="text-muted">Sudah punya akun?</span>
+            <a href="{{ route('login') }}" class="fw-bold ms-1">Masuk</a>
+        </div>
+    </form>
+
+</div>
+</div>
+
+</div>
 </div>
 @endsection

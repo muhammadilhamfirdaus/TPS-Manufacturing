@@ -8,11 +8,14 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold text-dark mb-1">Master Line & Mesin</h4>
-                <p class="text-muted small mb-0">Kelola line produksi dan daftar mesin yang tersedia</p>
+                <p class="text-muted small mb-0">Kelola line produksi, mesin internal, dan vendor subcont</p>
             </div>
-            <a href="{{ route('master-line.create') }}" class="btn btn-primary px-3">
-                <i class="fas fa-plus me-1"></i> Tambah Line
-            </a>
+            <div class="d-flex gap-2">
+                {{-- Tombol Tambah Line --}}
+                <a href="{{ route('master-line.create') }}" class="btn btn-primary px-3 shadow-sm">
+                    <i class="fas fa-plus me-1"></i> Tambah Line
+                </a>
+            </div>
         </div>
 
         {{-- Main Card --}}
@@ -22,17 +25,17 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
                             <tr>
-                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold" width="15%">Plant</th> {{-- Kolom Baru --}}
+                                <th class="ps-4 py-3 text-secondary small text-uppercase fw-bold" width="15%">Plant</th>
                                 <th class="py-3 text-secondary small text-uppercase fw-bold" width="25%">Nama Line</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center" width="15%">Jumlah Mesin</th>
-                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="30%">Preview Mesin</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold text-center" width="15%">Total Resource</th>
+                                <th class="py-3 text-secondary small text-uppercase fw-bold" width="30%">Daftar Mesin / Vendor</th>
                                 <th class="pe-4 py-3 text-secondary small text-uppercase fw-bold text-end" width="15%">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($lines as $line)
                             <tr>
-                                {{-- Plant (BARU) --}}
+                                {{-- Plant --}}
                                 <td class="ps-4">
                                     <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 fw-bold px-3">
                                         {{ $line->plant ?? 'PLANT -' }}
@@ -59,20 +62,36 @@
                                     </span>
                                 </td>
 
-                                {{-- Preview Mesin --}}
+                                {{-- Preview Mesin (UPDATED FOR SUBCONT) --}}
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
-                                        @forelse($line->machines->take(4) as $m)
-                                            <span class="badge bg-light text-secondary border fw-normal">
-                                                {{ $m->name }}
+                                        {{-- Tampilkan 5 mesin pertama --}}
+                                        @forelse($line->machines->take(5) as $m)
+                                            @php
+                                                // Cek Tipe Mesin (Internal vs Subcont)
+                                                // Pastikan model Machine sudah memiliki kolom 'type'
+                                                $isSubcont = ($m->type ?? 'INTERNAL') === 'SUBCONT';
+                                                
+                                                // Styling Badge: Kuning untuk Subcont, Abu-abu untuk Internal
+                                                $badgeClass = $isSubcont 
+                                                    ? 'bg-warning bg-opacity-25 text-dark border-warning border-opacity-50' 
+                                                    : 'bg-light text-secondary border';
+                                                
+                                                // Ikon Truk untuk Subcont
+                                                $icon = $isSubcont ? '<i class="fas fa-truck small me-1"></i>' : '';
+                                            @endphp
+
+                                            <span class="badge {{ $badgeClass }} fw-normal border" title="{{ $isSubcont ? 'Vendor Subcont' : 'Mesin Internal' }}">
+                                                {!! $icon !!}{{ $m->name }}
                                             </span>
                                         @empty
                                             <span class="text-muted small fst-italic">- Belum ada mesin -</span>
                                         @endforelse
                                         
-                                        @if($line->machines_count > 4)
+                                        {{-- Indikator Sisa --}}
+                                        @if($line->machines_count > 5)
                                             <span class="badge bg-light text-muted border fw-normal">
-                                                +{{ $line->machines_count - 4 }} lainnya
+                                                +{{ $line->machines_count - 5 }} lainnya
                                             </span>
                                         @endif
                                     </div>
@@ -81,7 +100,7 @@
                                 {{-- Aksi --}}
                                 <td class="text-end pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('master-line.edit', $line->id) }}" class="btn btn-sm btn-light text-primary border-0" title="Edit Line">
+                                        <a href="{{ route('master-line.edit', $line->id) }}" class="btn btn-sm btn-light text-primary border-0" title="Edit Line & Mesin">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         <form action="{{ route('master-line.destroy', $line->id) }}" method="POST" onsubmit="return confirm('Yakin hapus Line ini? Semua mesin di dalamnya akan ikut terhapus!')">

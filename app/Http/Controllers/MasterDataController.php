@@ -45,10 +45,14 @@ class MasterDataController extends Controller
     {
         // 1. Validasi
         $request->validate([
-            'code_part'   => 'required|string|max:50', 
-            'part_number' => 'required|string|unique:products,part_number,' . $id,
+            // [REVISI]: Code Part sekarang menjadi Unique Identifier (Tidak boleh kembar)
+            'code_part'   => 'required|string|max:50|unique:products,code_part,' . $id, 
+            
+            // [REVISI]: Part Number sekarang boleh kembar (cukup required)
+            'part_number' => 'required|string', 
+            
             'part_name'   => 'required|string',
-            'category'    => 'required|string', // <--- WAJIB: Validasi Kategori Baru
+            'category'    => 'required|string',
             'customer'    => 'required|string',        
             
             // Validasi Array Routing
@@ -110,7 +114,7 @@ class MasterDataController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('master.index')->with('success', 'Data Part (Kategori & Routing) berhasil disimpan!');
+            return redirect()->route('master.index')->with('success', 'Data Part berhasil disimpan! (Code Part: ' . $product->code_part . ')');
 
         } catch (\Exception $e) {
             DB::rollBack();

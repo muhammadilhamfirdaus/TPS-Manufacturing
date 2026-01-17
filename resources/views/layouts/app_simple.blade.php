@@ -158,6 +158,17 @@
                 </a>
             </li>
 
+            {{-- MENU BARU: MATRIX MONITORING --}}
+            {{-- Kita arahkan ini ke 'production.input' karena itu adalah view Matrix --}}
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('production.input') ? 'active' : '' }}"
+                   href="{{ route('production.input') }}">
+                    <i class="fas fa-th"></i> Matrix Produksi
+                </a>
+            </li>
+            
+            {{-- LINK MONITORING LAMA SUDAH DIHAPUS AGAR TIDAK ERROR --}}
+
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('plans.loading_report') ? 'active' : '' }}"
                    href="{{ route('plans.loading_report') }}">
@@ -199,6 +210,7 @@
                     <i class="fas fa-sitemap me-2"></i> Bill of Materials
                 </a>
             </li>
+            
             {{-- SYSTEM --}}
             <div class="sidebar-heading">SYSTEM</div>
 

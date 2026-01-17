@@ -6,60 +6,72 @@ use App\Models\Product;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ProductionPlanExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
+class ProductionPlanExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
-    /**
-     * Ambil Data Master Product, bukan Data Plan
-     */
-    public function collection()
+    protected $type;
+
+    // Terima parameter tipe (empty / set_data)
+    public function __construct($type = 'empty')
     {
-        // Urutkan berdasarkan nama part agar mudah dicari planner
-        return Product::orderBy('part_name', 'asc')->get();
+        $this->type = $type;
     }
 
+    /**
+    * Mengambil Data
+    */
+    public function collection()
+    {
+        if ($this->type === 'set_data') {
+            // Ambil semua produk yang aktif untuk dilist di Excel
+            // Urutkan berdasarkan Nama Part agar rapi
+            return Product::orderBy('part_name', 'asc')->get();
+        }
+
+        // Jika tipe 'empty', kembalikan collection kosong (hanya header nanti)
+        return collect([]);
+    }
+
+    /**
+    * Mapping Data ke Kolom Excel
+    */
+    public function map($product): array
+    {
+        // Jika Set Data, kita isi kolom identitas, biarkan kolom Plan kosong
+        return [
+            $product->code_part,    // A: Code Part (Primary Key buat sistem)
+            $product->part_number,  // B: Part Number (Info user)
+            $product->part_name,    // C: Part Name (Info user)
+            '',                     // D: PLAN DATE (User isi sendiri)
+            '',                     // E: QTY PLAN (User isi sendiri)
+        ];
+    }
+
+    /**
+    * Header Judul Kolom
+    */
     public function headings(): array
     {
         return [
-            'Plan Date (YYYY-MM-DD)', // Kosong (User isi)
-            'Line Name',              // Kosong (User isi)
-            'Shift',                  // Kosong (User isi)
-            'Part Number',            // TERISI OTOMATIS
-            'Part Name',              // TERISI OTOMATIS
-            'Qty Plan',               // Kosong (User isi)
+            'CODE PART (Wajib Unik)',
+            'PART NUMBER',
+            'PART NAME',
+            'PLAN DATE (YYYY-MM-DD)',
+            'QTY PLAN',
         ];
     }
 
     /**
-     * Mapping: Kolom kiri kosong, Kolom kanan isi data Master
-     */
-    public function map($product): array
-    {
-        return [
-            '', // Plan Date dibiarkan kosong
-            '', // Line Name dibiarkan kosong
-            '', // Shift dibiarkan kosong
-            $product->part_number, // Pre-filled dari Master
-            $product->part_name,   // Pre-filled dari Master
-            '', // Qty Plan dibiarkan kosong
-        ];
-    }
-
+    * Styling agar Header Tebal & Kuning (Optional biar cantik)
+    */
     public function styles(Worksheet $sheet)
     {
         return [
-            // Bold Header
-            1 => ['font' => ['bold' => true]],
-            
-            // Beri warna kuning muda pada kolom yang WAJIB diisi user (A, B, C, F)
-            'A1:C1' => ['fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFFFE0']]],
-            'F1'    => ['fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'FFFFE0']]],
-            
-            // Beri warna abu-abu pada kolom Read-only (D, E) biar user tau itu otomatis
-            'D1:E1' => ['fill' => ['fillType' => 'solid', 'startColor' => ['argb' => 'EEEEEE']]],
+            // Style baris pertama (Header)
+            1 => ['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFFFFF00']]],
         ];
     }
 }

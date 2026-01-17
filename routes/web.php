@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\SimulationController;
 use App\Http\Controllers\ProductionPlanController;
+use App\Http\Controllers\ProductionActualController;
 use App\Http\Controllers\KanbanController;
 use App\Http\Controllers\MasterDataController;
 use App\Http\Controllers\MasterLineController;
@@ -18,15 +19,12 @@ use App\Http\Controllers\BomController;
 |--------------------------------------------------------------------------
 */
 
-// 1. Authentication Routes
 Auth::routes();
 
-// 2. Root URL
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// 3. Testing Route
 Route::get('/test-tps', [SimulationController::class, 'testLogic']);
 
 /*
@@ -36,27 +34,34 @@ Route::get('/test-tps', [SimulationController::class, 'testLogic']);
 */
 Route::middleware(['auth'])->group(function () {
 
-    // Dashboard Home
+    // === DASHBOARD & LOGS ===
     Route::get('/home', [HomeController::class, 'index'])->name('home');
-
-    // === MODUL ACTIVITY LOGS (TRACKING) ===
     Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
 
-    // === MODUL PLANNING ===
-    // [PENTING] Urutan Route Custom harus di ATAS Resource
+    // === MODUL PLANNING (PLANNER) ===
 
-    // 1. Loading Report & Downloads
+    // 1. Custom Routes (Summary, Report, Export/Import)
+    Route::get('plans/summary', [ProductionPlanController::class, 'summary'])->name('plans.summary');
     Route::get('plans/loading-report/pdf', [ProductionPlanController::class, 'downloadLoadingPdf'])->name('plans.loading_pdf');
     Route::get('plans/loading-report/excel', [ProductionPlanController::class, 'downloadLoadingExcel'])->name('plans.loading_excel');
     Route::get('plans/loading-report', [ProductionPlanController::class, 'loadingReport'])->name('plans.loading_report');
-
-    // 2. Custom Actions Lainnya
-    Route::post('plans/loading-store', [ProductionPlanController::class, 'storeLoading'])->name('plans.loading_store');
+    
     Route::get('plans/export', [ProductionPlanController::class, 'export'])->name('plans.export');
     Route::post('plans/import', [ProductionPlanController::class, 'import'])->name('plans.import');
 
-    // 3. Resource CRUD
-    Route::resource('plans', ProductionPlanController::class);
+    // 2. Resource CRUD (Standard)
+    Route::resource('plans', ProductionPlanController::class)->names('plans');
+
+
+    // === MODUL PRODUKSI AKTUAL (OPERATOR) - MATRIX VIEW ===
+    Route::prefix('production')->name('production.')->group(function () {
+        // Hanya ada 2 route utama: Lihat Matrix & Simpan Matrix
+        // 'index' di controller sudah memuat tampilan Matrix
+        // 'store' di controller sudah memuat logic Bulk Save
+        Route::get('/input', [ProductionActualController::class, 'index'])->name('input');
+        Route::post('/store', [ProductionActualController::class, 'store'])->name('store');
+    });
+
 
     // === MODUL KANBAN ===
     Route::get('/kanban', [KanbanController::class, 'index'])->name('kanban.index');
@@ -64,19 +69,11 @@ Route::middleware(['auth'])->group(function () {
     // === MODUL MPP (MAN POWER PLANNING) ===
     Route::get('/mpp', [MppController::class, 'index'])->name('mpp.index');
 
-    // === MODUL BOM MANAGEMENT (BARU) ===
-    // Mengelola Resep Produk (Finish Good & Semi FG)
+    // === MODUL BOM MANAGEMENT ===
     Route::prefix('bom-management')->name('bom.')->group(function () {
-        // Halaman List Produk yang butuh BOM
-        Route::get('/', [BomController::class, 'list'])->name('list'); 
-        
-        // Halaman Edit/Kelola BOM per Produk
-        Route::get('/{id}/manage', [BomController::class, 'index'])->name('index'); 
-        
-        // Action Simpan Komponen
+        Route::get('/', [BomController::class, 'list'])->name('list');
+        Route::get('/{id}/manage', [BomController::class, 'index'])->name('index');
         Route::post('/{id}/store', [BomController::class, 'store'])->name('store');
-        
-        // Action Hapus Komponen
         Route::delete('/{id}/{childId}', [BomController::class, 'destroy'])->name('destroy');
     });
 

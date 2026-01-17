@@ -50,13 +50,11 @@
                         </div>
                         <div class="card-body">
                             {{-- Dropdown Plant --}}
-                           {{-- Dropdown Plant --}}
                             <div class="mb-3">
                                 <label class="form-label small text-muted text-uppercase fw-bold">Lokasi Plant</label>
                                 <select name="plant" class="form-select fw-bold text-dark bg-light border-0" required>
                                     <option value="">-- Pilih Plant --</option>
                                     @php 
-                                        // TAMBAHKAN 'EXTERNAL' DI SINI
                                         $plants = ['PLANT 1', 'PLANT 2', 'PLANT 3A', 'PLANT 3B', 'EXTERNAL']; 
                                     @endphp
                                     @foreach($plants as $p)
@@ -67,11 +65,22 @@
                                 </select>
                             </div>
 
+                            {{-- Input Nama Line --}}
                             <div class="mb-3">
                                 <label class="form-label small text-muted text-uppercase fw-bold">Nama Line</label>
                                 <input type="text" name="name" class="form-control fw-bold text-dark bg-light border-0" 
                                        placeholder="Contoh: LINE STAMPING P-2"
                                        value="{{ old('name', $line->name ?? '') }}" required>
+                            </div>
+
+                            {{-- INPUT BARU: JUMLAH SHIFT --}}
+                            <div class="mb-3">
+                                <label class="form-label small text-muted text-uppercase fw-bold">Jumlah Shift Op.</label>
+                                <select name="total_shifts" class="form-select fw-bold text-dark bg-light border-0" required>
+                                    <option value="1" {{ old('total_shifts', $line->total_shifts ?? 3) == 1 ? 'selected' : '' }}>1 Shift (Normal)</option>
+                                    <option value="2" {{ old('total_shifts', $line->total_shifts ?? 3) == 2 ? 'selected' : '' }}>2 Shift (Long Shift)</option>
+                                    <option value="3" {{ old('total_shifts', $line->total_shifts ?? 3) == 3 ? 'selected' : '' }}>3 Shift (24 Jam)</option>
+                                </select>
                             </div>
                             
                             {{-- Info Box --}}
@@ -101,7 +110,6 @@
                                     <thead class="bg-light">
                                         <tr>
                                             <th class="ps-4 py-3 text-secondary small text-uppercase" width="30%">Nama Mesin</th>
-                                            {{-- KOLOM BARU: TIPE --}}
                                             <th class="py-3 text-secondary small text-uppercase" width="20%">Tipe</th>
                                             <th class="py-3 text-secondary small text-uppercase" width="20%">Kode Aset</th>
                                             <th class="py-3 text-secondary small text-uppercase" width="20%">Group</th>
@@ -113,7 +121,6 @@
                                         @if(isset($line) && $line->machines->count() > 0)
                                             @foreach($line->machines as $index => $machine)
                                                 <tr>
-                                                    {{-- Hidden ID untuk Update --}}
                                                     <input type="hidden" name="machines[{{ $index }}][id]" value="{{ $machine->id }}">
                                                     
                                                     <td class="ps-4">
@@ -121,7 +128,6 @@
                                                                class="form-control form-control-sm border-0 bg-light fw-bold" required 
                                                                placeholder="Ex: P2-1" value="{{ $machine->name }}">
                                                     </td>
-                                                    {{-- SELECT TIPE (EDIT MODE) --}}
                                                     <td>
                                                         <select name="machines[{{ $index }}][type]" class="form-select form-select-sm border-0 bg-light text-secondary fw-bold">
                                                             <option value="INTERNAL" {{ ($machine->type ?? 'INTERNAL') == 'INTERNAL' ? 'selected' : '' }}>INTERNAL</option>
@@ -177,7 +183,6 @@
         let tableBody = document.getElementById('machine-table-body');
         let row = document.createElement('tr');
         
-        // SELECT TIPE JUGA DITAMBAHKAN DI SINI
         row.innerHTML = `
             <td class="ps-4">
                 <input type="text" name="machines[${machineIndex}][name]" 

@@ -4,25 +4,113 @@
 
 @section('content')
 <style>
-    /* Styling Khusus Tabel Matrix */
-    .table-matrix { font-size: 0.75rem; white-space: nowrap; }
-    .table-matrix th, .table-matrix td { padding: 4px 6px; vertical-align: middle; border: 1px solid #dee2e6; }
-    
-    /* Sticky Columns */
-    .sticky-col { position: sticky; left: 0; background-color: #fff; z-index: 10; border-right: 2px solid #ccc !important; }
-    .sticky-col-1 { left: 0; width: 40px; }
-    .sticky-col-2 { left: 40px; width: 100px; }
-    .sticky-col-3 { left: 140px; width: 120px; } 
-    .sticky-col-4 { left: 260px; width: 200px; } 
-    .sticky-col-5 { left: 460px; width: 80px; } 
-    .sticky-col-6 { left: 540px; width: 80px; } 
-    .sticky-col-7 { left: 620px; width: 60px; } 
+    /* 1. KUNCI LAYOUT TABEL AGAR TIDAK GOYANG SAAT ZOOM */
+    .table-container {
+        max-height: 75vh;
+        overflow: auto;
+        border: 1px solid #ccc;
+        position: relative;
+    }
 
+    .table-matrix {
+        width: max-content; /* Pastikan tabel melebar sesuai konten */
+        border-collapse: separate; /* Wajib untuk sticky */
+        border-spacing: 0;
+        table-layout: fixed; /* KUNCI: Agar lebar kolom patuh pada CSS */
+    }
+
+    .table-matrix th, .table-matrix td {
+        padding: 6px 4px;
+        vertical-align: middle;
+        border: 1px solid #dee2e6;
+        font-size: 0.7rem;
+        box-sizing: border-box; /* Agar padding tidak menambah lebar total */
+    }
+
+    /* 2. DEFINISI STICKY COLUMN (FREEZE) */
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: #fff;
+        z-index: 10; /* Di atas kolom tanggal */
+        
+        /* Kunci Lebar agar tidak berubah saat zoom */
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    /* Header Sticky butuh z-index lebih tinggi agar menimpa isi tabel saat scroll ke bawah */
+    thead .sticky-col {
+        z-index: 20; 
+        background-color: #f8f9fa; /* Warna header */
+    }
+
+    /* 3. MATEMATIKA LEBAR KOLOM (SANGAT PENTING!)
+       Rumus: Left Kolom Ini = Left Kolom Sebelumnya + Lebar Kolom Sebelumnya
+    */
+
+    /* Kolom 1: NO (Lebar 35px) */
+    .col-1-no { 
+        left: 0px; 
+        width: 35px; min-width: 35px; max-width: 35px;
+    }
+
+    /* Kolom 2: CODE (Lebar 80px) -> Left = 35 */
+    .col-2-code { 
+        left: 35px; 
+        width: 80px; min-width: 80px; max-width: 80px;
+    }
+
+    /* Kolom 3: PART NO (Lebar 110px) -> Left = 35 + 80 = 115 */
+    .col-3-part { 
+        left: 115px; 
+        width: 110px; min-width: 110px; max-width: 110px;
+    }
+
+    /* Kolom 4: DESKRIPSI (Lebar 180px) -> Left = 115 + 110 = 225 */
+    .col-4-desc { 
+        left: 225px; 
+        width: 180px; min-width: 180px; max-width: 180px;
+    }
+
+    /* Kolom 5: PLAN (Lebar 60px) -> Left = 225 + 180 = 405 */
+    .col-5-plan { 
+        left: 405px; 
+        width: 60px; min-width: 60px; max-width: 60px;
+    }
+
+    /* Kolom 6: SISA (Lebar 60px) -> Left = 405 + 60 = 465 */
+    .col-6-sisa { 
+        left: 465px; 
+        width: 60px; min-width: 60px; max-width: 60px;
+    }
+
+    /* Kolom 7: ADD (Lebar 45px) -> Left = 465 + 60 = 525 */
+    /* Ini kolom terakhir yang freeze, kasih border kanan tebal */
+    .col-7-add { 
+        left: 525px; 
+        width: 45px; min-width: 45px; max-width: 45px;
+        border-right: 3px solid #6c757d !important; /* Batas Freeze */
+    }
+
+
+    /* Styling Lainnya */
     .row-plan { background-color: #f8f9fa; color: #6c757d; }
     .row-act  { background-color: #ffffff; }
     .row-diff { background-color: #f1f5f9; font-weight: bold; }
 
-    .input-act { width: 100%; border: none; text-align: center; font-weight: bold; color: #0d6efd; background: transparent; padding: 0; }
+    .input-act {
+        width: 100%;
+        min-width: 30px;
+        border: none;
+        text-align: center;
+        font-weight: bold;
+        color: #0d6efd;
+        background: transparent;
+        padding: 0;
+        font-size: 0.75rem;
+    }
     .input-act:focus { outline: 2px solid #86b7fe; background: #fff; }
 
     .is-weekend { background-color: #e2e3e5 !important; } 
@@ -33,15 +121,18 @@
     
     {{-- FILTER HEADER --}}
     <form action="{{ route('production.input') }}" method="GET" class="card mb-3 border-0 shadow-sm">
-        <div class="card-body py-2 d-flex gap-3 align-items-center">
+        <div class="card-body py-2 d-flex gap-3 align-items-center flex-wrap">
             <div class="d-flex align-items-center gap-2">
                 <label class="fw-bold small text-muted">FILTER LINE:</label>
-                <select name="line_id" class="form-select form-select-sm fw-bold border-secondary" style="width: 150px;" onchange="this.form.submit()">
+                <select name="line_id" class="form-select form-select-sm fw-bold border-secondary" style="width: 160px;" onchange="this.form.submit()">
                     @foreach($lines as $line)
-                        <option value="{{ $line->id }}" {{ $lineId == $line->id ? 'selected' : '' }}>{{ $line->name }}</option>
+                        <option value="{{ $line->id }}" {{ $lineId == $line->id ? 'selected' : '' }}>
+                            {{ $line->name }}
+                        </option>
                     @endforeach
                 </select>
             </div>
+
             <div class="d-flex align-items-center gap-2">
                 <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
                     @for($m=1; $m<=12; $m++)
@@ -54,38 +145,43 @@
                 </select>
             </div>
             
-            {{-- INFO HARI KERJA --}}
-            <div class="ms-3 px-3 py-1 bg-light border rounded fw-bold text-primary small">
-                Hari Kerja: {{ $totalWorkingDays }} Hari
+            <div class="px-3 py-1 bg-light border rounded fw-bold text-primary small d-none d-md-block">
+                <i class="fas fa-calendar-day me-1"></i> Hari Kerja: {{ $totalWorkingDays }} Hari
             </div>
 
             <div class="ms-auto">
-                <button type="submit" form="formMatrix" class="btn btn-primary btn-sm fw-bold">
-                    <i class="fas fa-save me-1"></i> SIMPAN PERUBAHAN
+                <button type="submit" form="formMatrix" class="btn btn-primary btn-sm fw-bold shadow-sm">
+                    <i class="fas fa-save me-1"></i> SIMPAN
                 </button>
             </div>
         </div>
     </form>
 
-    @if(session('success')) <div class="alert alert-success py-2 mb-2 small fw-bold text-center">{{ session('success') }}</div> @endif
+    @if(session('success'))
+        <div class="alert alert-success py-2 mb-2 small fw-bold text-center border-0 bg-success bg-opacity-25 text-success">
+            <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+        </div>
+    @endif
 
+    {{-- TABLE MATRIX --}}
     <form id="formMatrix" action="{{ route('production.store') }}" method="POST">
         @csrf
         <input type="hidden" name="month" value="{{ $month }}">
         <input type="hidden" name="year" value="{{ $year }}">
 
-        <div class="table-responsive bg-white shadow-sm" style="max-height: 80vh; border: 1px solid #ccc;">
+        <div class="table-container bg-white shadow-sm">
             <table class="table table-bordered table-matrix mb-0">
-                <thead class="bg-light sticky-top" style="z-index: 20;">
+                <thead class="bg-light sticky-top">
                     <tr>
-                        <th class="sticky-col sticky-col-1 text-center">NO</th>
-                        <th class="sticky-col sticky-col-2 text-center">CODE PART</th>
-                        <th class="sticky-col sticky-col-3 text-center">PART NUMBER</th>
-                        <th class="sticky-col sticky-col-4 text-center">DESKRIPSI PART</th>
-                        <th class="sticky-col sticky-col-5 text-center">RENCANA</th>
-                        <th class="sticky-col sticky-col-6 text-center bg-warning bg-opacity-10">BALANCE</th>
-                        <th class="sticky-col sticky-col-7 text-center">ADD</th>
+                        <th class="sticky-col col-1-no text-center">NO</th>
+                        <th class="sticky-col col-2-code text-center">CODE</th>
+                        <th class="sticky-col col-3-part text-center">PART NO</th>
+                        <th class="sticky-col col-4-desc text-center">DESKRIPSI</th>
+                        <th class="sticky-col col-5-plan text-center">PLAN</th>
+                        <th class="sticky-col col-6-sisa text-center bg-warning bg-opacity-25 text-dark border-warning">SISA</th>
+                        <th class="sticky-col col-7-add text-center">ADD</th>
                         
+                        {{-- Loop Tanggal --}}
                         @for($d=1; $d<=$daysInMonth; $d++)
                             @php
                                 $dateObj = \Carbon\Carbon::create($year, $month, $d);
@@ -93,12 +189,12 @@
                                 $isHoliday = isset($holidays) && array_key_exists($d, $holidays);
                                 
                                 $colClass = '';
-                                if ($isHoliday) $colClass = 'bg-danger text-white';
-                                elseif ($isWeekend) $colClass = 'bg-secondary text-white';
+                                if ($isHoliday) $colClass = 'bg-danger text-white border-danger';
+                                elseif ($isWeekend) $colClass = 'bg-secondary text-white border-secondary';
                                 
-                                $title = $isHoliday ? ($holidays[$d] ?? 'Libur') : ($isWeekend ? 'Akhir Pekan' : '');
+                                $title = $isHoliday ? ($holidays[$d] ?? 'Libur') : ($isWeekend ? 'Weekend' : '');
                             @endphp
-                            <th class="text-center {{ $colClass }}" style="min-width: 40px;" title="{{ $title }}">
+                            <th class="text-center {{ $colClass }}" style="width: 35px; min-width: 35px;" title="{{ $title }}">
                                 {{ $d }}
                             </th>
                         @endfor
@@ -107,10 +203,8 @@
                 <tbody>
                     @forelse($plans as $index => $plan)
                         @php
-                            // --- RUMUS BARU: DIBAGI TOTAL HARI KERJA REAL ---
                             $dailyPlanAvg = ($plan->qty_plan > 0 && $totalWorkingDays > 0) 
-                                            ? round($plan->qty_plan / $totalWorkingDays) 
-                                            : 0; 
+                                            ? round($plan->qty_plan / $totalWorkingDays) : 0; 
                             
                             $totalActualMonth = $plan->productionActuals->sum('qty_good');
                             $balance = $plan->qty_plan - $totalActualMonth;
@@ -118,17 +212,23 @@
                         @endphp
 
                         <tr class="row-plan">
-                            <td class="sticky-col sticky-col-1 text-center fw-bold" rowspan="3" style="background:#fff;">{{ $loop->iteration }}</td>
-                            <td class="sticky-col sticky-col-2 fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->code_part ?? '-' }}</td>
-                            <td class="sticky-col sticky-col-3 fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->part_number }}</td>
-                            <td class="sticky-col sticky-col-4" rowspan="3" style="background:#fff;">
-                                <div class="text-truncate" style="max-width: 190px;" title="{{ $plan->product->part_name }}">{{ $plan->product->part_name }}</div>
+                            <td class="sticky-col col-1-no text-center fw-bold" rowspan="3" style="background:#fff;">{{ $loop->iteration }}</td>
+                            <td class="sticky-col col-2-code fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->code_part ?? '-' }}</td>
+                            <td class="sticky-col col-3-part fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->part_number }}</td>
+                            <td class="sticky-col col-4-desc" rowspan="3" style="background:#fff;">
+                                <div title="{{ $plan->product->part_name }}">
+                                    {{ $plan->product->part_name }}
+                                </div>
                             </td>
-                            <td class="sticky-col sticky-col-5 text-center fw-bold text-primary" rowspan="3" style="background:#fff;">{{ number_format($plan->qty_plan) }}</td>
-                            <td class="sticky-col sticky-col-6 text-center fw-bold {{ $balanceColor }} bg-light" rowspan="3">{{ number_format($balance) }}</td>
-                            
-                            <td class="sticky-col sticky-col-7 text-center small fw-bold">PLANN</td>
+                            <td class="sticky-col col-5-plan text-center fw-bold text-primary" rowspan="3" style="background:#fff;">
+                                {{ number_format($plan->qty_plan) }}
+                            </td>
+                            <td class="sticky-col col-6-sisa text-center fw-bold {{ $balanceColor }} bg-light border-warning" rowspan="3">
+                                {{ number_format($balance) }}
+                            </td>
+                            <td class="sticky-col col-7-add text-center small fw-bold">PLAN</td>
 
+                            {{-- Isi Data Plan --}}
                             @for($d=1; $d<=$daysInMonth; $d++)
                                 @php 
                                     $isWk = \Carbon\Carbon::create($year, $month, $d)->isWeekend(); 
@@ -141,7 +241,7 @@
                         </tr>
 
                         <tr class="row-act">
-                            <td class="sticky-col sticky-col-7 text-center small fw-bold text-success">ACT</td>
+                            <td class="sticky-col col-7-add text-center small fw-bold text-success">ACT</td>
                             @for($d=1; $d<=$daysInMonth; $d++)
                                 @php 
                                     $dateObj = \Carbon\Carbon::create($year, $month, $d);
@@ -149,8 +249,6 @@
                                     $isHol = isset($holidays) && array_key_exists($d, $holidays);
                                     $val = $matrixActuals[$plan->id][$d] ?? '';
                                     $bg = $isHol ? 'is-holiday' : ($isWk ? 'is-weekend' : '');
-                                    
-                                    // Boleh edit di hari libur HANYA jika ada datanya (koreksi)
                                     $readonly = (($isWk || $isHol) && empty($val)) ? 'readonly' : '';
                                 @endphp
                                 <td class="p-0 {{ $bg }}">
@@ -161,18 +259,15 @@
                         </tr>
 
                         <tr class="row-diff">
-                            <td class="sticky-col sticky-col-7 text-center small fw-bold text-muted">±</td>
+                            <td class="sticky-col col-7-add text-center small fw-bold text-muted">±</td>
                             @for($d=1; $d<=$daysInMonth; $d++)
                                 @php 
                                     $dateObj = \Carbon\Carbon::create($year, $month, $d);
                                     $isWk = $dateObj->isWeekend();
                                     $isHol = isset($holidays) && array_key_exists($d, $holidays);
                                     $act = $matrixActuals[$plan->id][$d] ?? 0;
-                                    
-                                    // Plan dianggap 0 jika libur/weekend
                                     $pln = (!$isWk && !$isHol) ? $dailyPlanAvg : 0;
                                     $diff = ($act > 0 || (!$isWk && !$isHol)) ? ($act - $pln) : '';
-                                    
                                     $textColor = '';
                                     if(is_numeric($diff)) $textColor = $diff < 0 ? 'text-danger' : 'text-success';
                                     $bg = $isHol ? 'is-holiday' : ($isWk ? 'is-weekend' : '');
@@ -180,9 +275,9 @@
                                 <td class="text-center {{ $bg }} {{ $textColor }}">{{ $diff }}</td>
                             @endfor
                         </tr>
-                        <tr><td colspan="45" style="padding:0; border-top: 2px solid #6c757d;"></td></tr>
+                        <tr><td colspan="45" style="padding:0; border-top: 2px solid #adb5bd;"></td></tr>
                     @empty
-                        <tr><td colspan="45" class="text-center py-5">Belum ada Plan untuk Line & Periode ini.</td></tr>
+                        <tr><td colspan="45" class="text-center py-5 text-muted">Belum ada Plan untuk Line & Periode ini.</td></tr>
                     @endforelse
                 </tbody>
             </table>

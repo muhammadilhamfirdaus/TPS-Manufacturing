@@ -2,82 +2,162 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\ProductionLine;
 use App\Models\ProductionPlanDetail;
-use Illuminate\Support\Facades\DB;
+use App\Models\ProductionLine;
+use App\Models\Holiday;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf; // PENTING: Jangan lupa import ini
 
 class MppController extends Controller
 {
+    /**
+     * 1. HALAMAN UTAMA (INDEX)
+     */
     public function index(Request $request)
     {
-        // 1. Filter Bulan (Default bulan ini)
         $month = $request->get('month', date('m'));
-        $year = $request->get('year', date('Y'));
+        $year  = $request->get('year', date('Y'));
+
+        // Panggil fungsi sentral pengolah data
+        $data = $this->getMppData($month, $year);
+
+        // Kirim data ke View Index
+        return view('mpp.index', array_merge($data, [
+            'month' => $month, 
+            'year' => $year
+        ]));
+    }
+
+    /**
+     * 2. EXPORT PDF (METHOD YANG HILANG)
+     */
+    public function exportPdf(Request $request)
+    {
+        $month = $request->get('month', date('m'));
+        $year  = $request->get('year', date('Y'));
+
+        // Panggil fungsi sentral yang SAMA dengan index
+        $data = $this->getMppData($month, $year);
+
+        // Tambahkan info bulan/tahun untuk judul di PDF
+        $data['month'] = $month;
+        $data['year'] = $year;
+
+        // Generate PDF menggunakan View 'mpp.pdf'
+        $pdf = Pdf::loadView('mpp.pdf', $data);
         
-        // 2. Setting Konstanta Kerja
-        $workDays = 22; // Hari kerja sebulan
-        $workHoursPerDay = 7.5; // Jam efektif per hari
-        $totalHoursPerson = $workDays * $workHoursPerDay; // 165 Jam/Orang
+        // Set ukuran kertas A4 Landscape
+        return $pdf->setPaper('a4', 'landscape')
+                   ->download('MPP_Report_'.date('Y_m').'.pdf');
+    }
 
-        // 3. Ambil Line beserta Mesin-mesinnya (PENTING: Eager Load 'machines')
-        $lines = ProductionLine::with('machines')->orderBy('plant')->orderBy('name')->get();
-        
-        // 4. Hitung Load per Line
-        $mppData = $lines->map(function($line) use ($month, $year, $totalHoursPerson) {
-            
-            // Ambil semua plan di line ini pada bulan terpilih
-            $details = ProductionPlanDetail::whereHas('productionPlan', function($q) use ($line, $month, $year) {
-                $q->where('production_line_id', $line->id)
-                  ->whereMonth('plan_date', $month)
-                  ->whereYear('plan_date', $year);
-            })->with(['product.routings'])->get();
+    /**
+     * 3. LOGIC PENGOLAH DATA (REUSABLE)
+     * Digunakan oleh Index dan ExportPdf agar hasilnya konsisten.
+     */
+    private function getMppData($month, $year)
+    {
+        // A. HITUNG HARI KERJA
+        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
+        $holidays = Holiday::whereMonth('date', $month)->whereYear('date', $year)->pluck('date')->toArray();
 
-            // --- REVISI LOGIKA PERHITUNGAN LOAD ---
-            $totalHoursLine = 0;
+        $workDays = 0;
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $date = Carbon::create($year, $month, $d);
+            if (!$date->isWeekend() && !in_array($date->format('Y-m-d'), $holidays)) {
+                $workDays++;
+            }
+        }
+        $workDays = $workDays > 0 ? $workDays : 22; 
+        $workHoursPerDay = 8; 
+        $totalHoursPerson = $workDays * $workHoursPerDay; 
 
-            // Ambil ID semua mesin di line ini untuk filter routing
-            $lineMachineIds = $line->machines->pluck('id')->toArray();
+        // B. QUERY DATABASE
+        $details = ProductionPlanDetail::with([
+                'productionPlan.productionLine',
+                'product.routings.machine.productionLine'
+            ])
+            ->whereHas('productionPlan', function($q) use ($month, $year) {
+                $q->whereMonth('plan_date', $month)
+                  ->whereYear('plan_date', $year)
+                  ->where('status', '!=', 'HISTORY');
+            })
+            ->get();
 
-            foreach($details as $d) {
-                if(!$d->product) continue;
+        // C. AKUMULASI DATA PER LINE
+        $aggregatedData = collect();
 
-                // Loop setiap proses/routing dari produk tersebut
-                foreach($d->product->routings as $routing) {
-                    // Cek: Apakah proses ini dikerjakan di mesin milik Line ini?
-                    if(in_array($routing->machine_id, $lineMachineIds)) {
-                        
-                        $capPerHour = $routing->pcs_per_hour;
-                        
-                        // Rumus Load: Qty Plan / Kapasitas per Jam
-                        if($capPerHour > 0) {
-                            $hours = $d->qty_plan / $capPerHour;
-                            $totalHoursLine += $hours;
-                        }
-                    }
+        foreach ($details as $detail) {
+            if (!$detail->product) continue;
+            $routings = $detail->product->routings;
+
+            if ($routings->isEmpty()) {
+                // Fallback jika tidak ada routing
+                $line = $detail->productionPlan->productionLine;
+                if($line) $this->accumulateData($aggregatedData, $line, $detail, null);
+            } else {
+                // Loop Routing
+                foreach ($routings as $routing) {
+                    $line = $routing->machine->productionLine ?? null;
+                    if ($line) $this->accumulateData($aggregatedData, $line, $detail, $routing);
                 }
             }
-            
-            // Sekarang $totalHoursLine adalah jumlah akumulasi dari SEMUA proses di line tersebut
-            // Contoh: (8000/700) + (8000/700) = 11.4 + 11.4 = 22.8 Jam
+        }
 
-            // Hitung MPP
-            $mppMurni = $totalHoursPerson > 0 ? ($totalHoursLine / $totalHoursPerson) : 0;
-
-            return (object) [
-                'plant' => $line->plant,
-                'line_name' => $line->name,
-                'keb_jam_kerja' => $totalHoursLine, // Ini sekarang sudah 22.8
-                'mpp_murni' => $mppMurni,
-                'mpp_aktual' => ceil($mppMurni), 
-                'helper' => 0,
-                'backup' => 0,
-            ];
+        // D. HITUNG HASIL AKHIR (MPP)
+        $mppData = $aggregatedData->map(function ($item) use ($totalHoursPerson) {
+            $mppMurni = $totalHoursPerson > 0 ? ($item->total_man_hours / $totalHoursPerson) : 0;
+            $item->mpp_murni  = $mppMurni;
+            $item->mpp_aktual = ceil($mppMurni);
+            return $item;
         });
 
-        // 5. Grouping by Plant
-        $groupedMpp = $mppData->groupBy('plant');
+        // Grouping & Sorting
+        $groupedMpp = $mppData->sortBy(function ($item) {
+            return $item->plant . $item->line_name;
+        })->groupBy('plant');
 
-        return view('mpp.index', compact('groupedMpp', 'month', 'year', 'totalHoursPerson'));
+        // Return array data
+        return compact('groupedMpp', 'totalHoursPerson', 'workDays');
+    }
+
+    /**
+     * 4. HELPER PERHITUNGAN MATEMATIS
+     */
+    private function accumulateData($collection, $line, $detail, $routing = null)
+    {
+        $lineId = $line->id;
+        
+        // Ambil data teknis
+        $pcsPerHour = $routing ? $routing->pcs_per_hour : ($detail->product->pcs_per_hour_global ?? 0);
+        if ($pcsPerHour <= 0) $pcsPerHour = 1; // Cegah division by zero
+
+        $mpRatio    = $routing ? $routing->manpower_ratio : 1; 
+        $cycleTime  = 3600 / $pcsPerHour; 
+
+        // Rumus Jam
+        $machineHours = ($detail->qty_plan * $cycleTime) / 3600;
+        
+        // Rumus Manpower dengan Rasio
+        $finalRatio = ($mpRatio > 0) ? $mpRatio : 1;
+        $manHours = $machineHours / $finalRatio;
+
+        // Inisialisasi jika belum ada
+        if (!$collection->has($lineId)) {
+            $collection->put($lineId, (object) [
+                'plant'           => $line->plant ?? 'OTHER',
+                'line_name'       => $line->name,
+                'keb_jam_kerja'   => 0,
+                'total_man_hours' => 0,
+                'mpp_murni'       => 0,
+                'mpp_aktual'      => 0,
+            ]);
+        }
+
+        // Tambahkan value
+        $data = $collection->get($lineId);
+        $data->keb_jam_kerja   += $machineHours;
+        $data->total_man_hours += $manHours; 
     }
 }

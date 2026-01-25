@@ -15,16 +15,18 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        // 1. Tentukan Periode (Bulan Ini)
-        $month = now()->month;
-        $year  = now()->year;
-        $monthName = now()->format('F Y');
+        // 1. Tentukan Periode (Ambil dari Request filter, atau default ke Bulan Ini)
+        $month = $request->get('month', date('m'));
+        $year  = $request->get('year', date('Y'));
+        
+        // Nama Bulan untuk Judul Dashboard
+        $monthName = Carbon::createFromDate($year, $month, 1)->format('F Y');
 
         // 2. Siapkan Array untuk Grafik
-        $labels = []; // Nama Line
-        $dataPlan = []; // Angka Plan
+        $labels = [];     // Nama Line
+        $dataPlan = [];   // Angka Plan
         $dataActual = []; // Angka Actual
 
         // 3. Ambil Semua Line
@@ -35,24 +37,47 @@ class HomeController extends Controller
         $grandTotalActual = 0;
 
         foreach ($lines as $line) {
-            // A. Hitung Plan Bulan Ini per Line
-            // Relasi: PlanDetail -> Plan (Header) -> Line
+            // =================================================================
+            // A. HITUNG PLAN (TARGET)
+            // =================================================================
+            // Cari Plan yang production_line_id-nya sesuai
             $linePlan = ProductionPlanDetail::whereHas('productionPlan', function($q) use ($line, $month, $year) {
                 $q->where('production_line_id', $line->id)
                   ->whereMonth('plan_date', $month)
-                  ->whereYear('plan_date', $year);
+                  ->whereYear('plan_date', $year)
+                  ->where('status', '!=', 'HISTORY');
             })->sum('qty_plan');
 
-            // B. Hitung Actual Bulan Ini per Line
-            // Relasi: Actual -> PlanDetail -> Plan -> Line
-            $lineActual = ProductionActual::whereHas('planDetail.productionPlan', function($q) use ($line, $month, $year) {
-                $q->where('production_line_id', $line->id);
+            // =================================================================
+            // B. HITUNG ACTUAL (REALISASI) - LOGIKA BARU
+            // =================================================================
+            // Karena tabel Actual tidak punya Line ID, kita cari lewat Code Part.
+            
+            // 1. Cari dulu: Part apa saja yang direncanakan jalan di Line ini bulan ini?
+            $plannedParts = ProductionPlanDetail::whereHas('productionPlan', function($q) use ($line, $month, $year) {
+                $q->where('production_line_id', $line->id)
+                  ->whereMonth('plan_date', $month)
+                  ->whereYear('plan_date', $year);
             })
-            ->whereMonth('production_date', $month)
-            ->whereYear('production_date', $year)
-            ->sum('qty_good');
+            ->with('product') // Load relasi ke tabel products
+            ->get()
+            ->pluck('product.code_part') // Ambil list Code Part-nya
+            ->unique()
+            ->toArray();
 
-            // Masukkan ke Array Data Grafik
+            // 2. Sum QTY_FINAL dari tabel Actual berdasarkan Code Part tersebut
+            // Jika Part A ada di Line ini, maka semua hasil produksi Part A dianggap milik Line ini.
+            $lineActual = 0;
+            if (!empty($plannedParts)) {
+                $lineActual = ProductionActual::whereIn('code_part', $plannedParts)
+                    ->whereMonth('production_date', $month)
+                    ->whereYear('production_date', $year)
+                    ->sum('qty_final'); // <--- PENTING: Pakai 'qty_final', bukan 'qty_good'
+            }
+
+            // =================================================================
+            // C. Masukkan ke Array Data Grafik
+            // =================================================================
             $labels[] = $line->name;
             $dataPlan[] = $linePlan;
             $dataActual[] = $lineActual;
@@ -74,7 +99,9 @@ class HomeController extends Controller
             'dataActual',
             'grandTotalPlan',
             'grandTotalActual',
-            'achievementPct'
+            'achievementPct',
+            'month', // Kirim balik ke view untuk select option
+            'year'
         ));
     }
 }

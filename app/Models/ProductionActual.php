@@ -17,7 +17,10 @@ class ProductionActual extends Model
         'production_line_id', // <--- WAJIB DITAMBAHKAN
         'product_id',         // <--- WAJIB DITAMBAHKAN
         'shift_id',
-        
+        'code_part',
+        'qty_delv',   // <--- WAJIB ADA agar inputan tersimpan
+        'qty_final',  // <--- WAJIB ADA agar inputan tersimpan
+        'created_by',
         'qty_good',
         'qty_reject',
         'created_by'

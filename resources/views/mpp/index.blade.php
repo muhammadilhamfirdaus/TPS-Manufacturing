@@ -5,34 +5,56 @@
     <div class="col-12">
         
         {{-- Header & Filter --}}
-        <div class="d-flex justify-content-between align-items-end mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 gap-3">
             <div>
                 <h4 class="fw-bold text-dark mb-1">SUMMARY KEBUTUHAN OPERATOR (MPP)</h4>
-                <p class="text-muted small mb-0">Perhitungan Man Power Planning berdasarkan Load Produksi</p>
+                <p class="text-muted small mb-0">
+                    Perhitungan Man Power Planning berdasarkan Load Produksi Bulan: 
+                    <span class="text-primary fw-bold">{{ date('F Y', mktime(0,0,0, $month, 1, $year)) }}</span>
+                </p>
             </div>
             
             {{-- Form Filter Bulan --}}
-            <form action="{{ route('mpp.index') }}" method="GET" class="d-flex gap-2">
-                <select name="month" class="form-select form-select-sm fw-bold border-secondary">
+            <form action="{{ route('mpp.index') }}" method="GET" class="d-flex gap-2 align-items-center bg-white p-2 rounded shadow-sm border">
+                <label class="small fw-bold text-muted mb-0">PERIODE:</label>
+                
+                {{-- Dropdown Bulan dengan Auto Submit --}}
+                <select name="month" class="form-select form-select-sm fw-bold border-secondary text-dark" style="width: 120px;" onchange="this.form.submit()">
                     @for($m=1; $m<=12; $m++)
                         <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
                             {{ date('F', mktime(0, 0, 0, $m, 1)) }}
                         </option>
                     @endfor
                 </select>
-                <select name="year" class="form-select form-select-sm fw-bold border-secondary">
+
+                {{-- Dropdown Tahun dengan Auto Submit --}}
+                <select name="year" class="form-select form-select-sm fw-bold border-secondary text-dark" style="width: 90px;" onchange="this.form.submit()">
                     @for($y=date('Y')-1; $y<=date('Y')+1; $y++)
                         <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
                     @endfor
                 </select>
-                <button type="submit" class="btn btn-dark btn-sm"><i class="fas fa-filter"></i> Filter</button>
+
+                <div class="vr mx-1"></div>
+                
+                {{-- Info Hari Kerja --}}
+                <span class="badge bg-light text-primary border">
+                    <i class="fas fa-calendar-day me-1"></i> {{ $workDays }} Hari Kerja
+                </span>
+                 {{-- TOMBOL EXPORT PDF --}}
+                <a href="{{ route('mpp.pdf', ['month' => $month, 'year' => $year]) }}" target="_blank" class="btn btn-sm btn-danger text-white shadow-sm border-0">
+                    <i class="fas fa-file-pdf me-1"></i> Export PDF
+                </a>
             </form>
+           
         </div>
 
-        {{-- Tabel Report (Style mirip Excel Gambar) --}}
+        
+
+        {{-- Tabel Report --}}
         <div class="card shadow-sm border-0 rounded-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
+                    {{--  --}}
                     <table class="table table-bordered table-sm align-middle mb-0" style="border-color: #999; font-size: 0.75rem;">
                         <thead style="background-color: #d1d5db; border-bottom: 2px solid #666;">
                             <tr class="text-center align-middle">
@@ -59,7 +81,7 @@
                                 $globalNo = 1;
                             @endphp
 
-                            @foreach($groupedMpp as $plant => $items)
+                            @forelse($groupedMpp as $plant => $items)
                                 {{-- SUBTOTAL VARIABLES --}}
                                 @php 
                                     $subTotalJam = 0;
@@ -67,12 +89,12 @@
                                 @endphp
 
                                 @foreach($items as $index => $row)
-                                    <tr class="bg-white">
+                                    <tr class="bg-white hover-bg-light">
                                         <td class="text-center border-end">{{ $globalNo++ }}</td>
                                         
                                         {{-- Merge Cell Plant --}}
                                         @if($index == 0)
-                                            <td rowspan="{{ count($items) }}" class="fw-bold align-middle bg-light border-end">{{ $plant }}</td>
+                                            <td rowspan="{{ count($items) + 1 }}" class="fw-bold align-middle bg-light border-end">{{ $plant }}</td>
                                         @endif
                                         
                                         <td class="fw-bold text-dark">{{ $row->line_name }}</td>
@@ -82,7 +104,7 @@
                                         <td class="text-center bg-info bg-opacity-10">{{ number_format($row->mpp_murni, 2) }}</td>
                                         <td class="text-center fw-bold">{{ $row->mpp_aktual }}</td>
                                         
-                                        {{-- Placeholder Adjustment (Bisa diedit nanti) --}}
+                                        {{-- Placeholder Adjustment --}}
                                         <td class="text-center text-muted">-</td>
                                         <td class="text-center text-muted">-</td>
                                         <td class="text-center text-muted">-</td>
@@ -98,13 +120,19 @@
                                 @endforeach
 
                                 {{-- ROW SUBTOTAL PER PLANT --}}
-                                <tr style="background-color: #e5e7eb; border-top: 2px solid #999;">
-                                    <td colspan="3" class="text-end fw-bold pe-3">SUB TOTAL {{ $plant }}</td>
-                                    <td class="text-end fw-bold pe-3">{{ number_format($subTotalJam, 1) }}</td>
-                                    <td class="text-center fw-bold">-</td>
-                                    <td class="text-center fw-bold">{{ $subTotalMpp }}</td>
+                                <tr style="background-color: #f8f9fa; border-top: 2px solid #999; font-weight: bold;">
+                                    {{-- Kolom Subtotal dipaskan dengan header --}}
+                                    {{-- Kolom 1 (No) & Kolom 2 (Plant - sudah dimerge) dianggap 1 kesatuan blok visual --}}
+                                    {{-- Kita geser "SUB TOTAL" ke kolom Line (index 3) agar lurus --}}
+                                    <td></td> {{-- Kosong di kolom NO --}}
+                                    {{-- Kolom PLANT sudah dimerge dari atas, jadi tidak perlu TD --}}
+                                    
+                                    <td class="text-end pe-3 text-uppercase small text-muted">SUB TOTAL {{ $plant }}</td>
+                                    <td class="text-end pe-3">{{ number_format($subTotalJam, 1) }}</td>
+                                    <td class="text-center">-</td>
+                                    <td class="text-center">{{ $subTotalMpp }}</td>
                                     <td colspan="3"></td>
-                                    <td class="text-center fw-bold bg-warning bg-opacity-25">{{ $subTotalMpp }}</td>
+                                    <td class="text-center bg-warning bg-opacity-25">{{ $subTotalMpp }}</td>
                                 </tr>
 
                                 @php
@@ -112,7 +140,14 @@
                                     $grandTotalMpp += $subTotalMpp;
                                 @endphp
 
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="10" class="text-center py-5 text-muted">
+                                        <i class="fas fa-search fa-2x mb-3 opacity-50"></i><br>
+                                        Tidak ada data plan produksi di periode ini.
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                         
                         {{-- GRAND TOTAL FOOTER --}}
@@ -132,7 +167,7 @@
             <div class="card-footer bg-white border-top small text-muted">
                 <i class="fas fa-info-circle me-1"></i> 
                 <strong>Rumus:</strong> Keb. Jam Kerja = (Qty Plan × Cycle Time). 
-                MPP Murni = Keb. Jam Kerja / {{ $totalHoursPerson }} Jam (Kapasitas per Orang/Bulan).
+                MPP Murni = Keb. Jam Kerja / {{ number_format($totalHoursPerson, 0) }} Jam (Kapasitas per Orang/Bulan).
             </div>
         </div>
 

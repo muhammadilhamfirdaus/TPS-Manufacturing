@@ -1,310 +1,308 @@
 @extends('layouts.app_simple')
 
-@section('title', 'Monitoring Produksi')
+@section('title', 'Input Matrix Produksi')
 
 @section('content')
-<style>
-    /* 1. KUNCI LAYOUT TABEL AGAR TIDAK GOYANG SAAT ZOOM */
-    .table-container {
-        max-height: 75vh;
-        overflow: auto;
-        border: 1px solid #ccc;
-        position: relative;
-    }
-
-    .table-matrix {
-        width: max-content; /* Pastikan tabel melebar sesuai konten */
-        border-collapse: separate; /* Wajib untuk sticky */
-        border-spacing: 0;
-        table-layout: fixed; /* KUNCI: Agar lebar kolom patuh pada CSS */
-    }
-
-    .table-matrix th, .table-matrix td {
-        padding: 6px 4px;
-        vertical-align: middle;
-        border: 1px solid #dee2e6;
-        font-size: 0.7rem;
-        box-sizing: border-box; /* Agar padding tidak menambah lebar total */
-    }
-
-    /* 2. DEFINISI STICKY COLUMN (FREEZE) */
-    .sticky-col {
-        position: sticky;
-        left: 0;
-        background-color: #fff;
-        z-index: 10; /* Di atas kolom tanggal */
-        
-        /* Kunci Lebar agar tidak berubah saat zoom */
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-    }
-
-    /* Header Sticky butuh z-index lebih tinggi agar menimpa isi tabel saat scroll ke bawah */
-    thead .sticky-col {
-        z-index: 20; 
-        background-color: #f8f9fa; /* Warna header */
-    }
-
-    /* 3. MATEMATIKA LEBAR KOLOM (SANGAT PENTING!)
-       Rumus: Left Kolom Ini = Left Kolom Sebelumnya + Lebar Kolom Sebelumnya
-    */
-
-    /* Kolom 1: NO (Lebar 35px) */
-    .col-1-no { 
-        left: 0px; 
-        width: 35px; min-width: 35px; max-width: 35px;
-    }
-
-    /* Kolom 2: CODE (Lebar 80px) -> Left = 35 */
-    .col-2-code { 
-        left: 35px; 
-        width: 80px; min-width: 80px; max-width: 80px;
-    }
-
-    /* Kolom 3: PART NO (Lebar 110px) -> Left = 35 + 80 = 115 */
-    .col-3-part { 
-        left: 115px; 
-        width: 110px; min-width: 110px; max-width: 110px;
-    }
-
-    /* Kolom 4: DESKRIPSI (Lebar 180px) -> Left = 115 + 110 = 225 */
-    .col-4-desc { 
-        left: 225px; 
-        width: 180px; min-width: 180px; max-width: 180px;
-    }
-
-    /* Kolom 5: PLAN (Lebar 60px) -> Left = 225 + 180 = 405 */
-    .col-5-plan { 
-        left: 405px; 
-        width: 60px; min-width: 60px; max-width: 60px;
-    }
-
-    /* Kolom 6: SISA (Lebar 60px) -> Left = 405 + 60 = 465 */
-    .col-6-sisa { 
-        left: 465px; 
-        width: 60px; min-width: 60px; max-width: 60px;
-    }
-
-    /* Kolom 7: ADD (Lebar 45px) -> Left = 465 + 60 = 525 */
-    /* Ini kolom terakhir yang freeze, kasih border kanan tebal */
-    .col-7-add { 
-        left: 525px; 
-        width: 45px; min-width: 45px; max-width: 45px;
-        border-right: 3px solid #6c757d !important; /* Batas Freeze */
-    }
-
-
-    /* Styling Lainnya */
-    .row-plan { background-color: #f8f9fa; color: #6c757d; }
-    .row-act  { background-color: #ffffff; }
-    .row-diff { background-color: #f1f5f9; font-weight: bold; }
-
-    .input-act {
-        width: 100%;
-        min-width: 30px;
-        border: none;
-        text-align: center;
-        font-weight: bold;
-        color: #0d6efd;
-        background: transparent;
-        padding: 0;
-        font-size: 0.75rem;
-    }
-    .input-act:focus { outline: 2px solid #86b7fe; background: #fff; }
-
-    .is-weekend { background-color: #e2e3e5 !important; } 
-    .is-holiday { background-color: #fee2e2 !important; color: #b91c1c !important; }
-</style>
-
-<div class="container-fluid px-0">
-    
-    {{-- FILTER HEADER --}}
-    <form action="{{ route('production.input') }}" method="GET" class="card mb-3 border-0 shadow-sm">
-        <div class="card-body py-2 d-flex gap-3 align-items-center flex-wrap">
-            <div class="d-flex align-items-center gap-2">
-                <label class="fw-bold small text-muted">FILTER LINE:</label>
-                <select name="line_id" class="form-select form-select-sm fw-bold border-secondary" style="width: 160px;" onchange="this.form.submit()">
-                    @foreach($lines as $line)
-                        <option value="{{ $line->id }}" {{ $lineId == $line->id ? 'selected' : '' }}>
-                            {{ $line->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="d-flex align-items-center gap-2">
-                <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
-                    @for($m=1; $m<=12; $m++)
-                        <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>{{ date('F', mktime(0,0,0,$m,1)) }}</option>
-                    @endfor
-                </select>
-                <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="2025" {{ $year == 2025 ? 'selected' : '' }}>2025</option>
-                    <option value="2026" {{ $year == 2026 ? 'selected' : '' }}>2026</option>
-                </select>
-            </div>
-            
-            <div class="px-3 py-1 bg-light border rounded fw-bold text-primary small d-none d-md-block">
-                <i class="fas fa-calendar-day me-1"></i> Hari Kerja: {{ $totalWorkingDays }} Hari
-            </div>
-
-            <div class="ms-auto">
-                <button type="submit" form="formMatrix" class="btn btn-primary btn-sm fw-bold shadow-sm">
-                    <i class="fas fa-save me-1"></i> SIMPAN
-                </button>
-            </div>
-        </div>
-    </form>
-
-    @if(session('success'))
-        <div class="alert alert-success py-2 mb-2 small fw-bold text-center border-0 bg-success bg-opacity-25 text-success">
-            <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- TABLE MATRIX --}}
-    <form id="formMatrix" action="{{ route('production.store') }}" method="POST">
-        @csrf
-        <input type="hidden" name="month" value="{{ $month }}">
-        <input type="hidden" name="year" value="{{ $year }}">
-
-        <div class="table-container bg-white shadow-sm">
-            <table class="table table-bordered table-matrix mb-0">
-                <thead class="bg-light sticky-top">
-                    <tr>
-                        <th class="sticky-col col-1-no text-center">NO</th>
-                        <th class="sticky-col col-2-code text-center">CODE</th>
-                        <th class="sticky-col col-3-part text-center">PART NO</th>
-                        <th class="sticky-col col-4-desc text-center">DESKRIPSI</th>
-                        <th class="sticky-col col-5-plan text-center">PLAN</th>
-                        <th class="sticky-col col-6-sisa text-center bg-warning bg-opacity-25 text-dark border-warning">SISA</th>
-                        <th class="sticky-col col-7-add text-center">ADD</th>
-                        
-                        {{-- Loop Tanggal --}}
-                        @for($d=1; $d<=$daysInMonth; $d++)
-                            @php
-                                $dateObj = \Carbon\Carbon::create($year, $month, $d);
-                                $isWeekend = $dateObj->isWeekend();
-                                $isHoliday = isset($holidays) && array_key_exists($d, $holidays);
-                                
-                                $colClass = '';
-                                if ($isHoliday) $colClass = 'bg-danger text-white border-danger';
-                                elseif ($isWeekend) $colClass = 'bg-secondary text-white border-secondary';
-                                
-                                $title = $isHoliday ? ($holidays[$d] ?? 'Libur') : ($isWeekend ? 'Weekend' : '');
-                            @endphp
-                            <th class="text-center {{ $colClass }}" style="width: 35px; min-width: 35px;" title="{{ $title }}">
-                                {{ $d }}
-                            </th>
-                        @endfor
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($plans as $index => $plan)
-                        @php
-                            $dailyPlanAvg = ($plan->qty_plan > 0 && $totalWorkingDays > 0) 
-                                            ? round($plan->qty_plan / $totalWorkingDays) : 0; 
-                            
-                            $totalActualMonth = $plan->productionActuals->sum('qty_good');
-                            $balance = $plan->qty_plan - $totalActualMonth;
-                            $balanceColor = $balance > 0 ? 'text-danger' : 'text-success';
-                        @endphp
-
-                        <tr class="row-plan">
-                            <td class="sticky-col col-1-no text-center fw-bold" rowspan="3" style="background:#fff;">{{ $loop->iteration }}</td>
-                            <td class="sticky-col col-2-code fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->code_part ?? '-' }}</td>
-                            <td class="sticky-col col-3-part fw-bold" rowspan="3" style="background:#fff;">{{ $plan->product->part_number }}</td>
-                            <td class="sticky-col col-4-desc" rowspan="3" style="background:#fff;">
-                                <div title="{{ $plan->product->part_name }}">
-                                    {{ $plan->product->part_name }}
-                                </div>
-                            </td>
-                            <td class="sticky-col col-5-plan text-center fw-bold text-primary" rowspan="3" style="background:#fff;">
-                                {{ number_format($plan->qty_plan) }}
-                            </td>
-                            <td class="sticky-col col-6-sisa text-center fw-bold {{ $balanceColor }} bg-light border-warning" rowspan="3">
-                                {{ number_format($balance) }}
-                            </td>
-                            <td class="sticky-col col-7-add text-center small fw-bold">PLAN</td>
-
-                            {{-- Isi Data Plan --}}
-                            @for($d=1; $d<=$daysInMonth; $d++)
-                                @php 
-                                    $isWk = \Carbon\Carbon::create($year, $month, $d)->isWeekend(); 
-                                    $isHol = isset($holidays) && array_key_exists($d, $holidays);
-                                @endphp
-                                <td class="text-center {{ ($isWk || $isHol) ? ($isHol ? 'is-holiday' : 'is-weekend') : '' }}">
-                                    {{ (!$isWk && !$isHol) ? $dailyPlanAvg : '' }}
-                                </td>
-                            @endfor
-                        </tr>
-
-                        <tr class="row-act">
-                            <td class="sticky-col col-7-add text-center small fw-bold text-success">ACT</td>
-                            @for($d=1; $d<=$daysInMonth; $d++)
-                                @php 
-                                    $dateObj = \Carbon\Carbon::create($year, $month, $d);
-                                    $isWk = $dateObj->isWeekend();
-                                    $isHol = isset($holidays) && array_key_exists($d, $holidays);
-                                    $val = $matrixActuals[$plan->id][$d] ?? '';
-                                    $bg = $isHol ? 'is-holiday' : ($isWk ? 'is-weekend' : '');
-                                    $readonly = (($isWk || $isHol) && empty($val)) ? 'readonly' : '';
-                                @endphp
-                                <td class="p-0 {{ $bg }}">
-                                    <input type="number" name="actuals[{{ $plan->id }}][{{ $d }}]" value="{{ $val }}" 
-                                           class="input-act" {{ $readonly }} onchange="calculateDiff(this, {{ $dailyPlanAvg }})">
-                                </td>
-                            @endfor
-                        </tr>
-
-                        <tr class="row-diff">
-                            <td class="sticky-col col-7-add text-center small fw-bold text-muted">±</td>
-                            @for($d=1; $d<=$daysInMonth; $d++)
-                                @php 
-                                    $dateObj = \Carbon\Carbon::create($year, $month, $d);
-                                    $isWk = $dateObj->isWeekend();
-                                    $isHol = isset($holidays) && array_key_exists($d, $holidays);
-                                    $act = $matrixActuals[$plan->id][$d] ?? 0;
-                                    $pln = (!$isWk && !$isHol) ? $dailyPlanAvg : 0;
-                                    $diff = ($act > 0 || (!$isWk && !$isHol)) ? ($act - $pln) : '';
-                                    $textColor = '';
-                                    if(is_numeric($diff)) $textColor = $diff < 0 ? 'text-danger' : 'text-success';
-                                    $bg = $isHol ? 'is-holiday' : ($isWk ? 'is-weekend' : '');
-                                @endphp
-                                <td class="text-center {{ $bg }} {{ $textColor }}">{{ $diff }}</td>
-                            @endfor
-                        </tr>
-                        <tr><td colspan="45" style="padding:0; border-top: 2px solid #adb5bd;"></td></tr>
-                    @empty
-                        <tr><td colspan="45" class="text-center py-5 text-muted">Belum ada Plan untuk Line & Periode ini.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </form>
-</div>
-
-<script>
-    function calculateDiff(input, dailyPlan) {
-        let td = input.parentElement;
-        let trAct = td.parentElement;
-        let cellIndex = td.cellIndex;
-        let trDiff = trAct.nextElementSibling;
-        let tdDiff = trDiff.children[cellIndex]; 
-        
-        let actualVal = parseInt(input.value) || 0;
-        let planVal = parseInt(dailyPlan) || 0;
-        
-        if(td.classList.contains('is-holiday') || td.classList.contains('is-weekend')) {
-            planVal = 0;
+    <style>
+        /* === LAYOUT UTAMA === */
+        .table-container {
+            max-height: 78vh;
+            overflow: auto;
+            border: 1px solid #ccc;
+            position: relative;
+            background-color: #fff;
         }
 
-        let diff = actualVal - planVal;
-        tdDiff.innerText = diff;
+        .table-matrix {
+            width: max-content;
+            border-collapse: separate;
+            border-spacing: 0;
+            /* table-layout: fixed; Hapus ini jika konten terpotong, tapi pakai width manual lebih aman */
+        }
+
+        .table-matrix th,
+        .table-matrix td {
+            padding: 4px 2px;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+            font-size: 0.7rem;
+            box-sizing: border-box;
+        }
+
+        /* === STICKY CONFIGURATION === */
         
-        if(diff < 0) tdDiff.className = "text-center text-danger fw-bold " + td.className;
-        else tdDiff.className = "text-center text-success fw-bold " + td.className;
-    }
-</script>
+        /* 1. Sticky Header */
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 2. Sticky Columns (Kolom Kiri) */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background-color: #fff;
+            z-index: 20;
+            border-right: 1px solid #dee2e6;
+        }
+
+        /* 3. Intersection (Pojok Kiri Atas) */
+        thead .sticky-col {
+            z-index: 50;
+            background-color: #e9ecef;
+        }
+
+        /* === POSISI KOLOM (FREEZE) === */
+        
+        /* 1. NO (35px) -> Start 0 */
+        .col-1-no { left: 0px; width: 35px; min-width: 35px; }
+
+        /* 2. CODE (70px) -> Start 35 */
+        .col-2-code { left: 35px; width: 70px; min-width: 70px; }
+
+        /* 3. PART NAME (120px) -> Start 105 */
+        .col-3-part { left: 105px; width: 120px; min-width: 120px; }
+
+        /* 4. KBN (50px) -> Start 225 */
+        .col-4-kbn { left: 225px; width: 50px; min-width: 50px; }
+
+        /* 5. PHOTO (60px) -> Start 275 */
+        .col-5-photo { left: 275px; width: 60px; min-width: 60px; }
+
+        /* 6. TARGET (60px) -> Start 335 */
+        .col-6-total { left: 335px; width: 60px; min-width: 60px; }
+
+        /* 7. SISA (60px) -> Start 395 */
+        .col-7-sisa { left: 395px; width: 60px; min-width: 60px; }
+
+        /* 8. TYPE (40px) -> Start 455 */
+        .col-8-type { 
+            left: 455px; width: 40px; min-width: 40px; 
+            border-right: 2px solid #6c757d !important; /* Batas Freeze */
+        }
+
+        /* === STYLE LAIN === */
+        .input-act { width: 100%; min-width: 70px; border: none; text-align: center; font-weight: bold; background: transparent; padding: 0; font-size: 0.75rem; color: #198754; }
+        .input-act:focus { outline: 2px solid #198754; background: #fff; }
+        .text-plan { font-weight: bold; color: #0d6efd; }
+        .is-weekend { background-color: #e9ecef !important; } 
+        .is-holiday { background-color: #fee2e2 !important; color: #b91c1c !important; }
+        
+        .img-part { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #dee2e6; cursor: pointer; }
+        .img-placeholder { font-size: 0.6rem; color: #ccc; text-align: center; display: flex; align-items: center; justify-content: center; height: 40px; border: 1px solid #eee; }
+    </style>
+
+    <div class="container-fluid px-0">
+
+        <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h5 class="fw-bold text-dark mb-0 me-2"><i class="fas fa-edit text-primary me-2"></i>Input Matrix</h5>
+
+                    {{-- FILTER FORM --}}
+                    <form id="filterForm" action="{{ route('production.input') }}" method="GET" class="d-flex gap-2 align-items-center">
+                        <select name="plant" id="plantSelect" class="form-select form-select-sm fw-bold border-primary text-primary" style="width: 100px;" onchange="filterLines()">
+                            @foreach($plants as $p)
+                                <option value="{{ $p }}" {{ $selectedPlant == $p ? 'selected' : '' }}>{{ $p }}</option>
+                            @endforeach
+                        </select>
+
+                        <select name="line_id" id="lineSelect" class="form-select form-select-sm fw-bold border-primary text-primary" style="width: 150px;" onchange="this.form.submit()">
+                            {{-- Option Lines di-generate via JS --}}
+                        </select>
+
+                        <select name="filter_month" class="form-select form-select-sm fw-bold border-secondary" style="width: 110px;" onchange="this.form.submit()">
+                            @for($m = 1; $m <= 12; $m++)
+                                <option value="{{ $m }}" {{ $selectedMonth == $m ? 'selected' : '' }}>{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option> 
+                            @endfor
+                        </select>
+                        <select name="filter_year" class="form-select form-select-sm fw-bold border-secondary" style="width: 80px;" onchange="this.form.submit()">
+                            @for($y = 2024; $y <= 2026; $y++)
+                                <option value="{{ $y }}" {{ $selectedYear == $y ? 'selected' : '' }}>{{ $y }}</option> 
+                            @endfor
+                        </select>
+                    </form>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" form="formSyncPlan" class="btn btn-outline-primary btn-sm fw-bold shadow-sm" onclick="return confirm('Update Data PLAN dari Google Sheet?')">
+                        <i class="fas fa-cloud-download-alt me-1"></i> SYNC PLAN
+                    </button>
+                    <button type="submit" form="formInputAct" class="btn btn-success btn-sm fw-bold shadow-sm px-4">
+                        <i class="fas fa-save me-1"></i> SIMPAN ACTUAL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if(session('success')) <div class="alert alert-success py-2 mb-2 small fw-bold text-center border-0 bg-success bg-opacity-10 text-success">{{ session('success') }}</div> @endif
+        @if(session('error')) <div class="alert alert-danger py-2 mb-2 small fw-bold text-center border-0 bg-danger bg-opacity-10 text-danger">{{ session('error') }}</div> @endif
+
+        <form id="formSyncPlan" action="{{ route('plans.sync_plan') }}" method="POST" style="display:none;">
+            @csrf
+            <input type="hidden" name="month" value="{{ $selectedMonth }}">
+            <input type="hidden" name="year" value="{{ $selectedYear }}">
+        </form>
+
+        <form id="formInputAct" action="{{ route('plans.store_actuals') }}" method="POST">
+            @csrf
+            <input type="hidden" name="month" value="{{ $selectedMonth }}">
+            <input type="hidden" name="year" value="{{ $selectedYear }}">
+
+            <div class="table-container shadow-sm">
+                <table class="table table-bordered table-matrix mb-0">
+                    <thead class="bg-light sticky-top">
+                        <tr>
+                            {{-- HEADER: GUNAKAN CLASS BARU --}}
+                            <th class="sticky-col col-1-no text-center">NO</th>
+                            <th class="sticky-col col-2-code text-center">CODE</th>
+                            <th class="sticky-col col-3-part text-center">PART NAME</th>
+                            <th class="sticky-col col-4-kbn text-center">KBN</th>
+                            <th class="sticky-col col-5-photo text-center">PHOTO</th>
+                            <th class="sticky-col col-6-total text-center">TARGET</th>
+                            <th class="sticky-col col-7-sisa text-center">SISA</th>
+                            <th class="sticky-col col-8-type text-center">TYPE</th>
+                            
+                            @php $daysInMonth = \Carbon\Carbon::create($selectedYear, $selectedMonth)->daysInMonth; @endphp
+                            @for($d = 1; $d <= $daysInMonth; $d++)
+                                @php
+                                    $dt = \Carbon\Carbon::create($selectedYear, $selectedMonth, $d);
+                                    $isHol = isset($holidays) && in_array($dt->format('Y-m-d'), $holidays);
+                                    $bg = $isHol ? 'bg-danger text-white' : ($dt->isWeekend() ? 'bg-secondary text-white' : '');
+                                @endphp
+                                <th class="text-center {{ $bg }}" style="width: 35px; min-width: 35px;">{{ $d }}</th>
+                            @endfor
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($matrixData as $code => $items)
+                            @php
+                                $prod = $items->first()->product;
+                                $partName = $prod->part_name ?? '-';
+                                $qtyKbn = $prod->qty_per_box ?? '-';
+                                $photo = $prod->photo ?? null;
+
+                                // 1. Target
+                                $sumPlan = $items->sum('qty_plan');
+
+                                // 2. Actual (PHP Native Array)
+                                $myActuals = $actualData[$code] ?? [];
+                                $sumAct = array_sum($myActuals);
+
+                                // 3. Sisa
+                                $sisa = $sumPlan - ($sumAct*$qtyKbn);
+                            @endphp
+
+                            <tr class="row-plan">
+                                {{-- KOLOM IDENTITAS (ROWSPAN 3) --}}
+                                <td class="sticky-col col-1-no text-center fw-bold bg-white" rowspan="3">{{ $loop->iteration }}</td>
+                                <td class="sticky-col col-2-code fw-bold text-center bg-white" rowspan="3">{{ $code }}</td>
+                                <td class="sticky-col col-3-part bg-white" rowspan="3">
+                                    <span class="d-block text-truncate" style="max-width:115px;" title="{{ $partName }}">{{ $partName }}</span>
+                                </td>
+                                <td class="sticky-col col-4-kbn text-center fw-bold bg-white" rowspan="3">{{ $qtyKbn }}</td>
+                                <td class="sticky-col col-5-photo text-center bg-white p-1" rowspan="3">
+                                    @if($photo)
+                                        <img src="{{ asset('storage/' . $photo) }}" class="img-part" alt="Img" onclick="window.open(this.src, '_blank')">
+                                    @else
+                                        <div class="img-placeholder mx-auto">No Pic</div>
+                                    @endif
+                                </td>
+                                <td class="sticky-col col-6-total text-center fw-bold text-primary bg-white" rowspan="3">{{ number_format($sumPlan) }}</td>
+                                <td class="sticky-col col-7-sisa text-center fw-bold bg-white {{ $sisa > 0 ? 'text-danger' : 'text-success' }}" rowspan="3">{{ number_format($sisa) }}</td>
+                                
+                                {{-- KOLOM TYPE (PLN) --}}
+                                <td class="sticky-col col-8-type text-center small fw-bold text-muted bg-white">PLN</td>
+
+                                {{-- DATA HARIAN --}}
+                                @for($d = 1; $d <= $daysInMonth; $d++)
+                                    <td class="text-center text-primary fw-bold" id="p_{{$code}}_{{$d}}" data-val="{{ $dailyPlanData[$code][$d] ?? 0 }}">
+                                        {{ isset($dailyPlanData[$code][$d]) ? number_format($dailyPlanData[$code][$d]) : '-' }}
+                                    </td>
+                                @endfor
+                            </tr>
+
+                            <tr class="row-act">
+                                {{-- KOLOM TYPE (ACT) --}}
+                                <td class="sticky-col col-8-type text-center small fw-bold text-success bg-white">ACT</td>
+                                @for($d = 1; $d <= $daysInMonth; $d++)
+                                    <td class="p-0 text-center">
+                                        <input type="number" name="actuals[{{ $code }}][{{ $d }}]"
+                                            value="{{ $actualData[$code][$d] ?? '' }}" class="input-act" autocomplete="off"
+                                            onchange="calcDiff('{{$code}}',{{$d}},this)">
+                                    </td>
+                                @endfor
+                            </tr>
+
+                          <tr class="row-diff">
+                                {{-- KOLOM TYPE (+/-) --}}
+                                <td class="sticky-col col-8-type text-center small fw-bold text-muted bg-white">±</td>
+                                
+                                {{-- Inisialisasi Akumulasi --}}
+                                @php $akumulasi = 0; @endphp
+
+                                @for($d = 1; $d <= $daysInMonth; $d++)
+                                    @php 
+                                        $p = $dailyPlanData[$code][$d] ?? 0;
+                                        $a = $actualData[$code][$d] ?? 0;
+
+                                        // RUMUS DIBALIK: (Actual - Plan)
+                                        // Actual < Plan = Negatif (Kurang)
+                                        // Actual > Plan = Positif (Lebih)
+                                        $akumulasi += ($a - $p); 
+                                        
+                                        // Logic Warna: Negatif (Kurang) = Merah, Positif (Lebih) = Hijau
+                                        $col = $akumulasi < 0 ? 'text-danger' : 'text-success';
+                                    @endphp
+                                    <td class="text-center small fw-bold {{ $col }}" id="d_{{$code}}_{{$d}}">
+                                        {{ $akumulasi }}
+                                    </td>
+                                @endfor
+                            </tr>
+                            <tr><td colspan="45" class="p-0 bg-secondary" style="height: 2px;"></td></tr>
+                        @empty
+                            <tr><td colspan="45" class="text-center py-5 text-muted">Tidak ada part di Line ini.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const masterLines = @json($allLines); 
+        const currentLineId = "{{ $lineId }}";
+
+        function filterLines() {
+            const plantSelect = document.getElementById('plantSelect');
+            const lineSelect = document.getElementById('lineSelect');
+            const selectedPlant = plantSelect.value;
+            
+            lineSelect.innerHTML = '<option value="">- Pilih Line -</option>';
+            if (selectedPlant) {
+                const filteredLines = masterLines.filter(line => line.plant == selectedPlant);
+                filteredLines.forEach(line => {
+                    const isSelected = (line.id == currentLineId) ? 'selected' : '';
+                    lineSelect.innerHTML += `<option value="${line.id}" ${isSelected}>${line.name}</option>`;
+                });
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            filterLines();
+        });
+
+        function calcDiff(code, day, input) {
+            let planVal = parseInt(document.getElementById(`plan_${code}_${day}`).getAttribute('data-val')) || 0;
+            let actVal = parseInt(input.value) || 0;
+            let diff = actVal - planVal;
+
+            let tdDiff = document.getElementById(`diff_${code}_${day}`);
+            tdDiff.innerText = diff;
+            tdDiff.className = "text-center " + (diff < 0 ? 'text-danger' : 'text-success');
+        }
+    </script>
 @endsection

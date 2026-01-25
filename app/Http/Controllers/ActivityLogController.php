@@ -7,10 +7,26 @@ use Illuminate\Http\Request;
 
 class ActivityLogController extends Controller
 {
-    public function index()
+    // Di ActivityLogController.php
+    public function index(Request $request)
     {
-        // Tampilkan 20 log terakhir, urut dari yang terbaru
-        $logs = ActivityLog::orderBy('created_at', 'desc')->paginate(20);
+        $query = ActivityLog::query();
+
+        // Filter Search
+        if ($request->has('search') && $request->search != '') {
+            $query->where(function ($q) use ($request) {
+                $q->where('user_name', 'like', '%' . $request->search . '%')
+                    ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Filter Action
+        if ($request->has('action') && $request->action != '') {
+            $query->where('action', 'like', '%' . $request->action . '%');
+        }
+
+        $logs = $query->orderBy('created_at', 'desc')->paginate(10);
+
         return view('logs.index', compact('logs'));
     }
 }

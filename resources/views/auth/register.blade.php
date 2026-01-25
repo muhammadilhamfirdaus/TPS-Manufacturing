@@ -9,7 +9,7 @@ html, body {
     height: 100%;
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    background: #f8fafc;
+    background: #f1f5f9; /* Background luar abu-abu terang */
 }
 
 .row-full-height {
@@ -17,7 +17,7 @@ html, body {
 }
 
 /* =====================
-   LEFT SIDE (BRANDING)
+   LEFT SIDE
 ===================== */
 .left-side {
     position: relative;
@@ -35,20 +35,8 @@ html, body {
     inset: 0;
     background: linear-gradient(
         135deg,
-        rgba(2,6,23,0.65),
-        rgba(15,23,42,0.55)
-    );
-    z-index: 1;
-}
-
-.left-side::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-        circle at top left,
-        rgba(255,255,255,0.08),
-        transparent 60%
+        rgba(2,6,23,0.85),
+        rgba(15,23,42,0.75)
     );
     z-index: 1;
 }
@@ -69,7 +57,7 @@ html, body {
 }
 
 .brand-title {
-    font-size: 2.6rem;
+    font-size: 2.8rem;
     font-weight: 800;
     line-height: 1.15;
     margin-top: 1.5rem;
@@ -89,10 +77,10 @@ html, body {
 }
 
 /* =====================
-   RIGHT SIDE (REGISTER)
+   RIGHT SIDE (REGISTER AREA)
 ===================== */
 .right-side {
-    background: #fff;
+    background: #f1f5f9; /* Background kontras */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -101,14 +89,33 @@ html, body {
 
 .register-box {
     width: 100%;
-    max-width: 460px;
+    max-width: 500px; /* Sedikit lebih lebar dari login karena ada form 2 kolom */
     background: #ffffff;
-    border-radius: 20px;
-    padding: 3rem;
-    box-shadow:
-        0 20px 40px rgba(0,0,0,.08),
-        0 1px 0 rgba(0,0,0,.05);
+    border-radius: 24px;
+    padding: 3.5rem;
+    
+    /* SHADOW KUAT & BORDER HALUS */
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+        0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    
     animation: fadeUp .6s ease;
+    position: relative;
+}
+
+/* Dekorasi kecil di belakang box */
+.register-box::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: linear-gradient(135deg, #e2e8f0, #ffffff);
+    z-index: -1;
+    border-radius: 30px;
+    opacity: 0.5;
 }
 
 @keyframes fadeUp {
@@ -117,41 +124,44 @@ html, body {
 }
 
 .register-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #0f172a, #1e293b);
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #0f172a, #334155);
     color: #fff;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: auto;
-    box-shadow: 0 15px 35px rgba(15,23,42,.4);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
 }
 
 /* =====================
-   FORM
+   FORM COMPONENTS
 ===================== */
 .form-label {
     font-size: .75rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #64748b;
-    letter-spacing: .5px;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
 .form-control {
-    border-radius: 10px;
+    border-radius: 12px;
     border: 2px solid #e2e8f0;
-    padding: 13px 15px;
+    padding: 14px 16px;
     background: #f8fafc;
-    font-size: .95rem;
+    font-size: 0.95rem;
+    transition: all 0.2s;
 }
 
 .form-control:focus {
+    border-color: #3b82f6;
     background: #fff;
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .input-group-text {
@@ -159,10 +169,18 @@ html, body {
     border: 2px solid #e2e8f0;
     border-right: none;
     color: #94a3b8;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
 .input-group .form-control {
     border-left: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #3b82f6;
+    background: #fff;
+    color: #3b82f6;
 }
 
 /* =====================
@@ -171,16 +189,19 @@ html, body {
 .btn-primary {
     background: linear-gradient(135deg, #0f172a, #1e293b);
     border: none;
-    padding: 14px;
+    padding: 16px;
     font-weight: 700;
-    letter-spacing: .5px;
+    font-size: 0.9rem;
     border-radius: 12px;
-    transition: all .3s ease;
+    letter-spacing: 0.5px;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 15px 35px rgba(15,23,42,.4);
+    box-shadow: 0 15px 25px rgba(15, 23, 42, 0.25);
+    background: linear-gradient(135deg, #1e293b, #334155);
 }
 
 /* =====================
@@ -188,6 +209,13 @@ html, body {
 ===================== */
 @media (max-width: 991px) {
     .left-side { display: none; }
+    .right-side { padding: 1.5rem; background: #fff; }
+    .register-box { 
+        box-shadow: none; 
+        padding: 1rem; 
+        border: none;
+    }
+    .register-box::before { display: none; }
 }
 </style>
 
@@ -210,7 +238,7 @@ html, body {
     </div>
 
     <div class="brand-footer text-end">
-        © {{ date('Y') }} PT. Toyota Production System
+        © {{ date('Y') }} PT. CITRA NUGERAH KARYA
     </div>
 </div>
 
@@ -219,10 +247,10 @@ html, body {
 <div class="register-box">
 
     <div class="text-center mb-5">
-        <div class="register-icon mb-3">
+        <div class="register-icon mb-4">
             <i class="fas fa-user-plus"></i>
         </div>
-        <h3 class="fw-bold">Buat Akun Baru</h3>
+        <h3 class="fw-bold text-dark mb-1">Buat Akun Baru</h3>
         <p class="text-muted small">Lengkapi data di bawah ini</p>
     </div>
 
@@ -250,28 +278,28 @@ html, body {
                 <label class="form-label">Password</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                    <input type="password" name="password" class="form-control" required>
+                    <input type="password" name="password" class="form-control" required placeholder="••••••">
                 </div>
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Konfirmasi Password</label>
+                <label class="form-label">Konfirmasi</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
-                    <input type="password" name="password_confirmation" class="form-control" required>
+                    <input type="password" name="password_confirmation" class="form-control" required placeholder="••••••">
                 </div>
             </div>
         </div>
 
         <div class="d-grid mb-4">
-            <button class="btn btn-primary">
+            <button class="btn btn-primary text-white">
                 DAFTAR SEKARANG <i class="fas fa-arrow-right ms-2"></i>
             </button>
         </div>
 
-        <div class="text-center small">
-            <span class="text-muted">Sudah punya akun?</span>
-            <a href="{{ route('login') }}" class="fw-bold ms-1">Masuk</a>
+        <div class="text-center small text-muted">
+            Sudah punya akun? 
+            <a href="{{ route('login') }}" class="fw-bold text-dark text-decoration-none">Masuk</a>
         </div>
     </form>
 

@@ -2,129 +2,162 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\ProductionPlan;
 use App\Models\ProductionPlanDetail;
 use App\Models\ProductionActual;
+use App\Models\DailyPlan;
 use App\Models\ProductionLine;
-use Carbon\Carbon;
+use App\Models\Holiday;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ProductionActualController extends Controller
 {
     // =================================================================
-    // 1. INDEX: TAMPILAN MATRIX (Menggantikan Input Harian Lama)
+    // 1. INDEX: TAMPILAN MATRIX INPUT (OPERATOR)
     // =================================================================
     public function index(Request $request)
     {
-        $month = $request->get('month', date('m'));
-        $year = $request->get('year', date('Y'));
-        
-        // ... (Kode Line & Plan query TETAP SAMA seperti sebelumnya) ...
-        $lineId = $request->get('line_id');
-        if(!$lineId) {
-            $firstLine = ProductionLine::first();
-            $lineId = $firstLine ? $firstLine->id : 0;
+        // 1. Filter Waktu
+        $selectedMonth = $request->get('filter_month', date('m'));
+        $selectedYear = $request->get('filter_year', date('Y'));
+
+        // 2. Filter Plant
+        $plants = \App\Models\ProductionLine::select('plant')->distinct()->orderBy('plant')->pluck('plant');
+        $selectedPlant = $request->get('plant', $plants->first());
+
+        // 3. Ambil Line
+        $allLines = \App\Models\ProductionLine::orderBy('name')->get();
+        $lines = $allLines->where('plant', $selectedPlant);
+        $lineId = $request->get('line_id', $lines->first()->id ?? 0);
+
+        // 4. LOGIC MATRIX DATA
+        $matrixData = collect();
+        if ($lineId) {
+            $matrixData = \App\Models\ProductionPlanDetail::with(['product', 'productionPlan'])
+                ->whereHas('productionPlan', function ($q) use ($selectedMonth, $selectedYear) {
+                    $q->whereMonth('plan_date', $selectedMonth)
+                        ->whereYear('plan_date', $selectedYear)
+                        ->where('status', '!=', 'HISTORY');
+                })
+                ->whereHas('product.routings', function ($q) use ($lineId) {
+                    $q->where('production_line_id', $lineId);
+                })
+                ->get()
+                ->groupBy(function ($item) {
+                    // PENTING: Trim agar kunci array bersih dari spasi
+                    return trim($item->product->code_part);
+                });
         }
-        $lines = ProductionLine::all();
-        $daysInMonth = Carbon::create($year, $month)->daysInMonth;
+        $validCodes = $matrixData->keys();
 
-        $plans = ProductionPlanDetail::whereHas('productionPlan', function($q) use ($month, $year, $lineId) {
-            $q->whereMonth('plan_date', $month)
-              ->whereYear('plan_date', $year)
-              ->where('production_line_id', $lineId);
-        })
-        ->with(['product', 'productionActuals', 'productionPlan.productionLine'])
-        ->get();
+        // 5. Data Target Harian (DailyPlan)
+        $dailyPlanData = [];
+        $rawDaily = \App\Models\DailyPlan::whereIn('code_part', $validCodes)
+            ->whereMonth('plan_date', $selectedMonth)
+            ->whereYear('plan_date', $selectedYear)
+            ->get();
 
-        $matrixActuals = [];
-        foreach($plans as $plan) {
-            foreach($plan->productionActuals as $actual) {
-                $d = (int) date('d', strtotime($actual->production_date));
-                $matrixActuals[$plan->id][$d] = $actual->qty_good;
-            }
+        foreach ($rawDaily as $dPlan) {
+            $code = trim($dPlan->code_part);
+            $day = (int) $dPlan->day_only;
+            $dailyPlanData[$code][$day] = $dPlan->qty;
         }
 
-        // --- AMBIL DATA LIBUR ---
-        $holidays = \App\Models\Holiday::whereMonth('date', $month)
-                    ->whereYear('date', $year)
-                    ->pluck('description', DB::raw('DAY(date) as day'))
-                    ->toArray();
+        // =====================================================================
+        // 6. [SOLUSI] AMBIL DATA ACTUAL MENJADI ARRAY PHP MURNI
+        // =====================================================================
+        $actualData = [];
+        $rawActuals = \App\Models\ProductionActual::whereIn('code_part', $validCodes)
+            ->whereMonth('production_date', $selectedMonth)
+            ->whereYear('production_date', $selectedYear)
+            ->get();
 
-        // --- HITUNG TOTAL HARI KERJA (EFFECTIVE WORKING DAYS) ---
+        foreach ($rawActuals as $act) {
+            // 1. Bersihkan Code Part (Trim) agar cocok dengan matrix
+            $code = trim($act->code_part);
+
+            // 2. Ubah Tanggal jadi Integer (misal "2026-01-05" -> 5)
+            $day = (int) \Carbon\Carbon::parse($act->production_date)->format('d');
+
+            // 3. Masukkan ke Array [code][tanggal] = qty
+            $actualData[$code][$day] = $act->qty_final;
+        }
+        // =====================================================================
+
+        // 7. Hari Libur & Kerja
+        $holidays = \App\Models\Holiday::whereMonth('date', $selectedMonth)
+            ->whereYear('date', $selectedYear)
+            ->pluck('date')
+            ->toArray();
+
+        $daysInMonth = \Carbon\Carbon::create($selectedYear, $selectedMonth)->daysInMonth;
         $totalWorkingDays = 0;
         for ($d = 1; $d <= $daysInMonth; $d++) {
-            $dateObj = Carbon::create($year, $month, $d);
-            $isWeekend = $dateObj->isWeekend();
-            $isHoliday = array_key_exists($d, $holidays);
-
-            // Jika BUKAN Weekend DAN BUKAN Libur, hitung sebagai hari kerja
-            if (!$isWeekend && !$isHoliday) {
+            $dt = \Carbon\Carbon::create($selectedYear, $selectedMonth, $d);
+            if (!$dt->isWeekend() && !in_array($dt->format('Y-m-d'), $holidays)) {
                 $totalWorkingDays++;
             }
         }
 
         return view('production.input', compact(
-            'plans', 'lines', 'lineId', 'month', 'year', 
-            'daysInMonth', 'matrixActuals', 'holidays', 
-            'totalWorkingDays' // <--- KITA KIRIM VARIABEL INI
+            'matrixData',
+            'selectedMonth',
+            'selectedYear',
+            'plants',
+            'selectedPlant',
+            'allLines',
+            'lines',
+            'lineId',
+            'dailyPlanData',
+            'actualData',
+            'holidays',
+            'totalWorkingDays'
         ));
     }
-
     // =================================================================
-    // 2. STORE: SIMPAN DATA DARI MATRIX (BULK SAVE)
+    // 2. STORE: SIMPAN DATA ACTUAL (INPUT MANUAL)
     // =================================================================
     public function store(Request $request)
     {
-        $data = $request->input('actuals'); // Array: [plan_detail_id][tanggal] => qty
-        $month = $request->input('month');
-        $year = $request->input('year');
+        $month = $request->month;
+        $year = $request->year;
+
+        // Data input dari view: name="actuals[CODE_PART][DAY]"
+        $inputs = $request->actuals;
 
         DB::beginTransaction();
         try {
-            if ($data) {
-                foreach ($data as $planDetailId => $dates) {
-                    // Ambil info Plan Induk sekali saja untuk efisiensi
-                    $planDetail = ProductionPlanDetail::with('productionPlan')->find($planDetailId);
-                    if (!$planDetail)
-                        continue;
+            if ($inputs) {
+                foreach ($inputs as $codePart => $days) {
+                    foreach ($days as $day => $qty) {
+                        // Simpan jika input tidak null (0 boleh disimpan)
+                        if ($qty !== null && $qty !== '') {
+                            $date = Carbon::create($year, $month, $day)->format('Y-m-d');
 
-                    foreach ($dates as $date => $qty) {
-                        // Skip jika null (kosong) agar tidak menimpa data
-                        if ($qty === null)
-                            continue;
-
-                        // Format Tanggal Lengkap: YYYY-MM-DD
-                        $fullDate = sprintf('%s-%s-%02d', $year, $month, $date);
-
-                        ProductionActual::updateOrCreate(
-                            [
-                                'production_plan_detail_id' => $planDetailId,
-                                'production_date' => $fullDate,
-                            ],
-                            [
-                                'production_line_id' => $planDetail->productionPlan->production_line_id,
-                                'shift_id' => $planDetail->productionPlan->shift_id,
-                                'product_id' => $planDetail->product_id,
-                                'qty_good' => $qty,
-                                'qty_reject' => 0, // Default 0
-                                'created_by' => auth()->id()
-                            ]
-                        );
+                            ProductionActual::updateOrCreate(
+                                [
+                                    'production_date' => $date,
+                                    'code_part' => $codePart
+                                ],
+                                [
+                                    'qty_delv' => $qty, // Simpan sebagai input manual
+                                    'qty_final' => $qty, // Angka ini yang dipakai report
+                                    'created_by' => auth()->id() ?? 1
+                                ]
+                            );
+                        }
                     }
                 }
             }
+
             DB::commit();
-            return back()->with('success', 'Data Produksi berhasil disimpan!');
+            return back()->with('success', 'Data Actual Produksi berhasil disimpan!');
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors('Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menyimpan: ' . $e->getMessage());
         }
-    }
-
-    // Method monitoring lama bisa dihapus atau dibiarkan saja
-    public function monitoring(Request $request)
-    {
-        // ... (Optional)
-        return redirect()->route('production.input'); // Redirect ke matrix aja
     }
 }

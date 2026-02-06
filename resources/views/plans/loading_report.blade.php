@@ -15,15 +15,25 @@
             </div>
 
             <div class="d-flex gap-2 align-items-center flex-wrap">
-                {{-- Form Filter (Line, Bulan, Tahun) --}}
                 <form action="{{ route('plans.loading_report') }}" method="GET" class="d-flex gap-2 align-items-center">
                     
-                    {{-- Filter Line --}}
+                    {{-- Filter Plant --}}
+                    <select name="plant" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-dark" style="min-width: 120px;" onchange="this.form.submit()">
+                        <option value="ALL">Semua Plant</option>
+                        @foreach($plants as $p)
+                            <option value="{{ $p }}" {{ $selectedPlant == $p ? 'selected' : '' }}>{{ $p }}</option>
+                        @endforeach
+                    </select>
+
+                   {{-- Filter Line --}}
                     <select name="line_id" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-dark" style="min-width: 180px;" onchange="this.form.submit()">
-                        @foreach($allLines as $l)
-                            <option value="{{ $l->id }}" {{ $line->id == $l->id ? 'selected' : '' }}>
-                                {{ $l->name }}
-                            </option>
+                        <option value="">- Semua Line -</option>
+                        @foreach($lines as $l)
+                            @if($selectedPlant == 'ALL' || $l->plant == $selectedPlant)
+                                <option value="{{ $l->id }}" {{ isset($line->id) && $line->id == $l->id ? 'selected' : '' }}>
+                                    {{ $l->name }}
+                                </option>
+                            @endif
                         @endforeach
                     </select>
 
@@ -39,27 +49,23 @@
                     {{-- Filter Tahun --}}
                     <select name="year" class="form-select form-select-sm bg-white border shadow-sm fw-bold text-secondary" style="width: 90px;" onchange="this.form.submit()">
                         @for($y=date('Y')-1; $y<=date('Y')+1; $y++)
-                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
-                                {{ $y }}
-                            </option>
+                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
                         @endfor
                     </select>
-
                 </form>
 
                 <div class="vr h-50 my-auto text-secondary opacity-25 d-none d-md-block"></div>
 
                 {{-- Tombol Download --}}
                 <div class="btn-group shadow-sm" role="group">
-                    <a href="{{ route('plans.loading_excel', ['line_id' => $line->id, 'month' => $month, 'year' => $year]) }}" class="btn btn-sm btn-white border text-success fw-bold" target="_blank" title="Download Excel">
+                    <a href="#" class="btn btn-sm btn-white border text-success fw-bold" target="_blank" title="Download Excel">
                         <i class="fas fa-file-excel me-1"></i> Excel
                     </a>
-                    <a href="{{ route('plans.loading_pdf', ['line_id' => $line->id, 'month' => $month, 'year' => $year]) }}" class="btn btn-sm btn-white border text-danger fw-bold" target="_blank" title="Download PDF">
+                    <a href="#" class="btn btn-sm btn-white border text-danger fw-bold" target="_blank" title="Download PDF">
                         <i class="fas fa-file-pdf me-1"></i> PDF
                     </a>
                 </div>
 
-                {{-- Tombol Kembali --}}
                 <a href="{{ route('plans.index') }}" class="btn btn-sm btn-light border text-secondary shadow-sm" title="Kembali">
                     <i class="fas fa-arrow-left"></i>
                 </a>
@@ -70,13 +76,13 @@
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-header bg-white py-3 border-bottom text-center">
                 <h6 class="fw-bold text-dark mb-0 text-uppercase ls-1">
-                    {{ $line->name }} - MACHINE LOADING ANALYSIS
+                    {{ $line->name ?? 'SEMUA LINE' }} - MACHINE LOADING ANALYSIS
                 </h6>
             </div>
             
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
-                    {{-- Tabel Matriks --}}
+                    {{-- Tabel Matriks  --}}
                     <table class="table table-bordered table-sm align-middle text-center mb-0" style="font-size: 0.7rem; border-color: #e5e7eb;">
                         <thead class="bg-light text-secondary sticky-top" style="z-index: 10;">
                             <tr>
@@ -118,10 +124,8 @@
                                 <td class="text-start fw-bold text-dark">{{ $row->part_number }}</td>
                                 <td class="text-start text-nowrap text-secondary">{{ $row->part_name }}</td>
                                 
-                                {{-- Process Name --}}
                                 <td class="text-primary fw-bold text-uppercase" style="font-size: 0.65rem;">{{ $row->process_name }}</td>
                                 
-                                {{-- Plan & Cap --}}
                                 <td class="fw-bold text-dark bg-light">{{ number_format($row->qty_plan) }}</td>
                                 <td class="fw-bold text-primary bg-primary bg-opacity-10">{{ number_format($row->pcs_per_hour) }}</td>
                                 <td class="text-muted">{{ number_format($row->cycle_time, 1) }}</td>
@@ -129,9 +133,12 @@
                                 {{-- Loop Matriks Mesin --}}
                                 @foreach($groupedMachines as $groupName => $machines)
                                     @foreach($machines as $machine)
-                                        @if($machine->id == $row->machine_id)
+                                        @php
+                                            $val = $row->machine_loads[$machine->id] ?? 0;
+                                        @endphp
+                                        @if($val > 0)
                                             <td class="bg-success bg-opacity-25 fw-bold text-dark border border-success border-opacity-25">
-                                                {{ number_format($row->load_hours, 1) }}
+                                                {{ number_format($val, 1) }}
                                             </td>
                                         @else
                                             <td class="bg-white"></td> 
@@ -140,41 +147,32 @@
                                 @endforeach
 
                                 {{-- Total Load per Row --}}
-                                <td class="fw-bold bg-warning bg-opacity-10 border-start">{{ number_format($row->load_hours, 1) }}</td>
+                                <td class="fw-bold bg-warning bg-opacity-10 border-start">
+                                    {{ number_format($row->total_load, 1) }}
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                @php $cols = 9 + $line->machines->count(); @endphp
-                                <td colspan="{{ $cols }}" class="text-center py-5 text-muted bg-light">
-                                    <i class="fas fa-chart-bar fa-2x mb-3 text-secondary opacity-50"></i><br>
+                                <td colspan="100" class="text-center py-5 text-muted bg-light">
                                     Belum ada data loading untuk periode ini.
                                 </td>
                             </tr>
                             @endforelse
                         </tbody>
                         
-                        {{-- FOOTER TOTAL YANG MENYATU & SOLID --}}
+                        {{-- FOOTER TOTAL --}}
                         <tfoot class="sticky-bottom" style="z-index: 10;">
-                            {{-- Gunakan border-top tebal & warna background abu-abu muda agar terlihat sebagai pondasi tabel --}}
                             <tr class="fw-bold text-dark" style="background-color: #e9ecef; border-top: 2px solid #6c757d;">
-                                
-                                {{-- LABEL TOTAL (Rata Kanan) --}}
                                 <td colspan="8" class="text-end py-3 pe-3 align-middle text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
                                     TOTAL MACHINE LOAD (HOURS)
                                 </td>
                                 
-                                {{-- LOOP TOTAL PER MESIN --}}
                                 @foreach($groupedMachines as $groupName => $machines)
                                     @foreach($machines as $machine)
                                         @php
                                             $total = $machineTotals[$machine->id] ?? 0;
-                                            // Logic Visual:
-                                            // - Jika ada nilai (>0): Warna teks hitam tebal
-                                            // - Jika 0: Warna abu-abu pudar (-)
                                             $textColor = $total > 0 ? 'text-dark' : 'text-muted opacity-25';
                                         @endphp
-                                        
-                                        {{-- Border Start & End dijaga agar garis vertikal tabel tetap nyambung --}}
                                         <td class="text-center py-3 align-middle border-start border-secondary border-opacity-25 {{ $textColor }}" 
                                             style="background-color: #e9ecef;">
                                             {{ $total > 0 ? number_format($total, 1) : '-' }}
@@ -182,7 +180,6 @@
                                     @endforeach
                                 @endforeach
 
-                                {{-- GRAND TOTAL (Highlight Kuning Solid) --}}
                                 <td class="text-center py-3 align-middle bg-warning text-dark border-start border-dark" 
                                     style="box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);">
                                     {{ number_format($grandTotalLoad, 1) }}

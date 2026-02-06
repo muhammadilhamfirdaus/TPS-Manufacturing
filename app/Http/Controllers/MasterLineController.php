@@ -5,7 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ProductionLine;
 use App\Models\Machine;
+use App\Models\ActivityLog; // <--- Import Model Log
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth; // <--- Import Auth
+// Pastikan Import Class di atas
+use App\Exports\LineMachineTemplateExport;
+use App\Imports\LinesImport;
+use Maatwebsite\Excel\Facades\Excel;
+
 
 class MasterLineController extends Controller
 {
@@ -24,7 +31,6 @@ class MasterLineController extends Controller
     // 2. FORM TAMBAH
     public function create()
     {
-        // PERBAIKAN: Panggil 'master_line.form' (sesuai nama file Anda)
         return view('master_line.form'); 
     }
 
@@ -33,7 +39,6 @@ class MasterLineController extends Controller
     {
         $line = ProductionLine::with('machines')->findOrFail($id);
         
-        // PERBAIKAN: Panggil 'master_line.form'
         return view('master_line.form', compact('line')); 
     }
 
@@ -44,13 +49,13 @@ class MasterLineController extends Controller
         $request->validate([
             'plant' => 'required|string', 
             'name'  => 'required|string|max:100',
-            'total_shifts' => 'required|integer|min:1|max:3', // Validasi Shift
+            'total_shifts' => 'required|integer|min:1|max:3', 
             
             // Validasi Array Mesin
             'machines' => 'nullable|array',
             'machines.*.name' => 'required|string',
             'machines.*.machine_code' => 'required|string',
-            'machines.*.type' => 'nullable|string|in:INTERNAL,SUBCONT', // Validasi Tipe Mesin
+            'machines.*.type' => 'nullable|string|in:INTERNAL,SUBCONT', 
         ]);
 
         DB::beginTransaction();
@@ -61,11 +66,16 @@ class MasterLineController extends Controller
             // Set default std_manpower jadi 0 (dihitung di MPP)
             $dataLine['std_manpower'] = 0; 
 
+            // 
             if ($id) {
                 $line = ProductionLine::findOrFail($id);
                 $line->update($dataLine); 
+                $logAction = 'UPDATE MASTER LINE';
+                $logDesc = "Update Line: {$line->name} (Plant: {$line->plant})";
             } else {
                 $line = ProductionLine::create($dataLine);
+                $logAction = 'CREATE MASTER LINE';
+                $logDesc = "Create New Line: {$line->name} (Plant: {$line->plant})";
             }
 
             // B. Simpan Mesin-Mesin
@@ -78,9 +88,9 @@ class MasterLineController extends Controller
                         'name' => $m['name'],
                         'machine_code' => $m['machine_code'],
                         'machine_group' => $m['machine_group'] ?? null,
-                        'type' => $m['type'] ?? 'INTERNAL', // Default INTERNAL
+                        'type' => $m['type'] ?? 'INTERNAL', 
                         'production_line_id' => $line->id,
-                        'capacity_per_hour' => 0 // Default 0
+                        'capacity_per_hour' => 0 
                     ];
 
                     // Cek ID (Update / Create)
@@ -102,8 +112,16 @@ class MasterLineController extends Controller
                     ->whereNotIn('id', $existingIds)
                     ->delete();
 
+            // [TAMBAHAN] CATAT LOG CREATE/UPDATE
+            ActivityLog::create([
+                'user_id'     => Auth::id(),
+                'user_name'   => Auth::user()->name,
+                'action'      => $logAction,
+                'description' => $logDesc
+            ]);
+
             DB::commit();
-            return redirect()->route('master-line.index')->with('success', 'Data Line & Mesin berhasil disimpan!');
+           return redirect()->route('lines.index')->with('success', 'Data Berhasil Disimpan');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -114,10 +132,58 @@ class MasterLineController extends Controller
     // 5. DELETE LINE
     public function destroy($id)
     {
-        $line = ProductionLine::findOrFail($id);
-        $line->machines()->delete(); // Hapus mesinnya dulu
-        $line->delete(); // Hapus linenya
-        
-        return back()->with('success', 'Line Produksi berhasil dihapus.');
+        try {
+            $line = ProductionLine::findOrFail($id);
+            $lineInfo = "{$line->plant} - {$line->name}";
+            
+            $line->machines()->delete(); // Hapus mesinnya dulu
+            $line->delete(); // Hapus linenya
+            
+            // [TAMBAHAN] CATAT LOG DELETE
+            ActivityLog::create([
+                'user_id'     => Auth::id(),
+                'user_name'   => Auth::user()->name,
+                'action'      => 'DELETE MASTER LINE',
+                'description' => "Menghapus Line Produksi: {$lineInfo}"
+            ]);
+
+            return back()->with('success', 'Line Produksi berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
+    }
+
+    // 1. DOWNLOAD TEMPLATE
+    public function downloadTemplate()
+    {
+        return Excel::download(new LineMachineTemplateExport, 'template_line_machine.xlsx');
+    }
+
+    // 2. IMPORT EXCEL
+   public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        try {
+            Excel::import(new LinesImport, $request->file('file'));
+            return back()->with('success', 'Data Line & Machine berhasil diimport!');
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             $failures = $e->failures();
+             dd($failures); // Cek validasi excel
+             
+        } catch (\Exception $e) {
+            // ==============================================
+            // MODE DEBUGGING: AKTIF (HAPUS NANTI JIKA SUDAH FIX)
+            // ==============================================
+            dd([
+                'STATUS' => 'ERROR IMPORT LINE & MACHINE',
+                'PESAN' => $e->getMessage(), // <--- Ini yang paling penting
+                'FILE' => $e->getFile(),
+                'LINE' => $e->getLine()
+            ]);
+        }
     }
 }

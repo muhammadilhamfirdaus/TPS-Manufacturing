@@ -20,7 +20,8 @@
             </div>
         @endif
         
-        <form action="{{ route('master-line.store', $line->id ?? '') }}" method="POST">
+        {{-- GANTI route('master-line.store') JADI route('lines.store') --}}
+        <form action="{{ route('lines.store', $line->id ?? '') }}" method="POST">
             @csrf
             
             {{-- Header Page & Actions --}}
@@ -32,7 +33,8 @@
                     <p class="text-muted small mb-0">Kelola line produksi dan daftar mesin yang tersedia</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="{{ route('master-line.index') }}" class="btn btn-light border text-secondary">
+                    {{-- GANTI JADI lines.index --}}
+                    <a href="{{ route('lines.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Kembali
                     </a>
                     <button type="submit" class="btn btn-primary px-4">

@@ -11,7 +11,7 @@ class ProductionLine extends Model
 
     protected $fillable = [
         'plant',         // Pastikan nama kolom ini sesuai DB (apakah 'plant' atau 'plant_id')
-        'name', 
+        'name',
         'std_manpower',
         'total_shifts'   // <--- WAJIB DITAMBAHKAN
     ];
@@ -19,6 +19,6 @@ class ProductionLine extends Model
     // Relasi: Satu Line punya banyak Mesin
     public function machines()
     {
-        return $this->hasMany(Machine::class);
+        return $this->hasMany(Machine::class, 'production_line_id');
     }
 }

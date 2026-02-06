@@ -9,7 +9,7 @@ html, body {
     height: 100%;
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    background: #f8fafc;
+    background: #f1f5f9; /* Ganti warna background agar kontras dengan box */
 }
 
 .row-full-height {
@@ -35,20 +35,8 @@ html, body {
     inset: 0;
     background: linear-gradient(
         135deg,
-        rgba(2,6,23,0.65),
-        rgba(15,23,42,0.55)
-    );
-    z-index: 1;
-}
-
-.left-side::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(
-        circle at top left,
-        rgba(255,255,255,0.08),
-        transparent 60%
+        rgba(2,6,23,0.85),
+        rgba(15,23,42,0.75)
     );
     z-index: 1;
 }
@@ -89,9 +77,9 @@ html, body {
 }
 
 .feature-item {
-    background: rgba(255,255,255,0.18);
-    backdrop-filter: blur(3px);
-    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.2);
     padding: 10px 18px;
     border-radius: 999px;
     font-size: .85rem;
@@ -109,10 +97,10 @@ html, body {
 }
 
 /* =====================
-   RIGHT SIDE
+   RIGHT SIDE (AREA LOGIN)
 ===================== */
 .right-side {
-    background: #fff;
+    background: #f1f5f9; /* Background luar abu-abu terang */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -121,12 +109,35 @@ html, body {
 
 .login-box {
     width: 100%;
-    max-width: 420px;
-    background: #fff;
-    border-radius: 20px;
-    padding: 3rem;
-    box-shadow: 0 20px 40px rgba(0,0,0,.08);
+    max-width: 450px; /* Lebarkan sedikit */
+    background: #ffffff;
+    border-radius: 24px; /* Sudut lebih bulat */
+    padding: 3.5rem; /* Padding lebih lega */
+    
+    /* SHADOW YANG KUAT AGAR "POP UP" */
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+        0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        
+    /* BORDER HALUS UNTUK DEFINISI */
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    
     animation: fadeUp .6s ease;
+    position: relative;
+}
+
+/* Dekorasi kecil di belakang box (opsional, biar estetik) */
+.login-box::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: linear-gradient(135deg, #e2e8f0, #ffffff);
+    z-index: -1;
+    border-radius: 30px;
+    opacity: 0.5;
 }
 
 @keyframes fadeUp {
@@ -135,35 +146,41 @@ html, body {
 }
 
 .login-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    color: #fff;
+    width: 64px; /* Perbesar icon */
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #0f172a, #334155);
+    color: #ffffff;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: auto;
-    box-shadow: 0 15px 35px rgba(15,23,42,.4);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
 }
 
 .form-label {
     font-size: .75rem;
     font-weight: 700;
     text-transform: uppercase;
-    color: #64748b;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    display: block;
 }
 
 .form-control {
-    border-radius: 10px;
+    border-radius: 12px;
     border: 2px solid #e2e8f0;
-    padding: 13px 15px;
+    padding: 14px 16px;
     background: #f8fafc;
+    font-size: 0.95rem;
+    transition: all 0.2s;
 }
 
 .form-control:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+    border-color: #3b82f6;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .input-group-text {
@@ -171,10 +188,18 @@ html, body {
     border: 2px solid #e2e8f0;
     border-right: none;
     color: #94a3b8;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
 }
 
 .input-group .form-control {
     border-left: none;
+}
+
+.input-group:focus-within .input-group-text {
+    border-color: #3b82f6;
+    background: #fff;
+    color: #3b82f6;
 }
 
 /* =====================
@@ -183,13 +208,19 @@ html, body {
 .btn-primary {
     background: linear-gradient(135deg, #0f172a, #1e293b);
     border: none;
-    padding: 14px;
+    padding: 16px;
     font-weight: 700;
+    font-size: 0.9rem;
     border-radius: 12px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
+    box-shadow: 0 15px 25px rgba(15, 23, 42, 0.25);
+    background: linear-gradient(135deg, #1e293b, #334155);
 }
 
 /* =====================
@@ -197,6 +228,13 @@ html, body {
 ===================== */
 @media (max-width: 991px) {
     .left-side { display: none; }
+    .right-side { padding: 1.5rem; background: #fff; }
+    .login-box { 
+        box-shadow: none; 
+        padding: 1rem; 
+        border: none;
+    }
+    .login-box::before { display: none; }
 }
 </style>
 
@@ -234,11 +272,11 @@ html, body {
 <div class="login-box">
 
     <div class="text-center mb-5">
-        <div class="login-icon mb-3">
+        <div class="login-icon mb-4">
             <i class="fas fa-industry"></i>
         </div>
-        <h3 class="fw-bold">Administrator Login</h3>
-        <p class="text-muted small">Authorized access only</p>
+        <h3 class="fw-bold text-dark mb-1">Welcome Back!</h3>
+        <p class="text-muted small">Please login to access your dashboard.</p>
     </div>
 
     <form method="POST" action="{{ route('login') }}">
@@ -248,43 +286,43 @@ html, body {
             <label class="form-label">Corporate Email</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="far fa-envelope"></i></span>
-                <input type="email" name="email" class="form-control" required>
+                <input type="email" name="email" class="form-control" placeholder="name@company.com" required>
             </div>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-4">
             <label class="form-label">Password</label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                <input type="password" name="password" class="form-control" required>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
             </div>
         </div>
 
         {{-- REMEMBER & FORGOT --}}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="form-check">
-                <input type="checkbox" class="form-check-input" name="remember">
-                <label class="form-check-label small text-muted">Ingat Saya</label>
+                <input type="checkbox" class="form-check-input" name="remember" id="remember">
+                <label class="form-check-label small text-muted cursor-pointer" for="remember">Remember me</label>
             </div>
 
             @if (Route::has('password.request'))
                 <a href="{{ route('password.request') }}"
                    class="small fw-bold text-decoration-none"
-                   style="color:#2563eb">
-                    Lupa Password?
+                   style="color:#3b82f6">
+                    Forgot Password?
                 </a>
             @endif
         </div>
 
         <div class="d-grid mb-4">
-            <button class="btn btn-primary">
-                LOGIN SYSTEM <i class="fas fa-arrow-right ms-2"></i>
+            <button class="btn btn-primary text-white">
+                LOGIN TO DASHBOARD
             </button>
         </div>
 
-        <div class="text-center small">
-            <span class="text-muted">Belum punya akun?</span>
-            <a href="{{ route('register') }}" class="fw-bold ms-1">Daftar</a>
+        <div class="text-center small text-muted">
+            Don't have an account? 
+            <a href="{{ route('register') }}" class="fw-bold text-dark text-decoration-none">Sign Up</a>
         </div>
     </form>
 

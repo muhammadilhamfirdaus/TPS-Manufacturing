@@ -45,4 +45,10 @@ class ProductionPlanDetail extends Model
     {
         return $this->hasMany(ProductionMachineAllocation::class);
     }
+
+    public function materials()
+    {
+        // Sesuaikan 'ProductionPlanMaterial' dengan nama model tabel yg menyimpan list kebutuhan material (PO)
+        return $this->hasMany(ProductionPlanMaterial::class, 'production_plan_detail_id');
+    }
 }

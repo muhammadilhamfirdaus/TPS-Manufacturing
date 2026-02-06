@@ -10,66 +10,159 @@ class Product extends Model
 {
     use HasFactory, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'code_part',
         'part_number',
         'part_name',
-        'category',      // <--- WAJIB DITAMBAHKAN AGAR BISA DISIMPAN
+        'category',
         'customer',
+        'photo',
         'cycle_time',
+        'manpower_ratio', // Ratio level product (jika ada)
         'uom',
         'qty_per_box',
+        'kode_box',
+        'lot_size_pcs',
+        'kanban_post',  
+        'fluctuation',
+        'kanban_aktif',
+        'material_remarks', 
         'safety_stock',
-        'flow_process'
+        'collecting_post',
+        'flow_process',
+        'line',
+        'lot_size',
+        'kode_box',
+        'load_time',
+        'lead_time',
+        'kanban_aktif',
+        'stock_pcs',
+        'kanban_type',
     ];
 
+    protected $casts = [
+        'cycle_time' => 'float',
+        'qty_per_box' => 'integer',
+        'safety_stock' => 'integer',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELATIONS
+    |--------------------------------------------------------------------------
+    */
+
     /**
-     * RELASI PENTING UNTUK FITUR AUTO LOADING
-     * Mengambil daftar routing (mesin & proses) untuk produk ini.
+     * 1. ROUTINGS (Has Many)
+     * Mengambil routing urut berdasarkan ID agar flow process teratur (A -> B -> C).
      */
     public function routings()
     {
-        return $this->hasMany(ProductRouting::class);
+        return $this->hasMany(ProductRouting::class)->orderBy('id', 'asc');
     }
 
     /**
-     * Helper: Mengambil daftar mesin yang digunakan produk ini secara langsung
+     * 2. MACHINES (Belongs To Many)
+     * Mengambil daftar mesin via tabel pivot 'product_routings'.
      */
     public function machines()
     {
-        return $this->belongsToMany(Machine::class, 'product_routings');
+        return $this->belongsToMany(Machine::class, 'product_routings', 'product_id', 'machine_id')
+            ->withPivot([
+                'process_name',
+                'capacity_per_hour', // Sesuaikan nama kolom di DB 
+                'manpower_ratio',    // Sesuaikan nama kolom di DB
+                'production_line_id' // Tambahan kolom baru (PENTING)
+            ])
+            ->withTimestamps();
     }
 
-    // Relasi ke Plan Detail (Opsional, untuk tracking history)
+    /**
+     * 3. PRODUCTION PLAN DETAILS
+     */
     public function productionPlanDetails()
     {
         return $this->hasMany(ProductionPlanDetail::class);
     }
 
-    // Relasi ke Kanban Master (Opsional, jika modul Kanban dipakai)
+    /**
+     * 4. KANBAN MASTER
+     */
     public function kanbanMaster()
     {
         return $this->hasOne(KanbanMaster::class);
     }
 
-    // Relasi ke Child (Komponen yang dibutuhkan produk ini - BOM)
+    /**
+     * 5. BOM COMPONENTS
+     */
     public function bomComponents()
     {
         return $this->belongsToMany(Product::class, 'bom_details', 'parent_product_id', 'child_product_id')
-            ->withPivot('id', 'quantity') // Agar bisa akses kolom quantity & ID pivot
+            ->withPivot('id', 'quantity')
             ->withTimestamps();
     }
 
-    // Relasi ke Parent (Produk ini dipakai di mana saja? - Where Used)
+    /**
+     * 6. USED IN
+     */
     public function usedIn()
     {
         return $this->belongsToMany(Product::class, 'bom_details', 'child_product_id', 'parent_product_id')
             ->withPivot('id', 'quantity')
             ->withTimestamps();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ACCESSORS (ATTRIBUTE CUSTOM)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Mengambil Flow Process.
+     * Jika kolom manual diisi, pakai itu.
+     * Jika kosong, generate otomatis dari Routing.
+     */
+    public function getFlowProcessAttribute($value)
+    {
+        // 1. Jika di database sudah diisi manual, gunakan itu
+        if (!empty($value) && $value !== '-') {
+            return $value;
+        }
+
+        // 2. Jika kosong, generate dari Routing Process Name
+        // Cek apakah relasi 'routings' sudah di-load agar tidak berat (Optimasi N+1)
+        if ($this->relationLoaded('routings')) {
+            $flows = $this->routings->pluck('process_name')->filter()->toArray();
+            return !empty($flows) ? implode(' ➔ ', $flows) : '-';
+        }
+
+        // 3. Fallback jika relation belum di-load
+        return '-';
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SCOPES (QUERY HELPER)
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Scope untuk pencarian data (Search Bar)
+     * Cara pakai di Controller: Product::search('kata kunci')->get();
+     */
+    public function scopeSearch($query, $term)
+    {
+        if (!$term) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($term) {
+            $q->where('code_part', 'like', "%{$term}%")
+                ->orWhere('part_number', 'like', "%{$term}%")
+                ->orWhere('part_name', 'like', "%{$term}%")
+                ->orWhere('customer', 'like', "%{$term}%");
+        });
     }
 }
